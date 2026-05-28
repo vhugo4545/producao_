@@ -169,7 +169,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .p4-grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
 
 .timer-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rxl);padding:32px 24px;text-align:center;box-shadow:var(--shadow-md);margin-bottom:14px}
-.big-timer{font-family:'JetBrains Mono',monospace;font-size:54px;font-weight:500;color:var(--tx);letter-spacing:-.01em;line-height:1;transition:color .2s}
+.big-timer{font-family:'JetBrains Mono',monospace;font-size:82px;font-weight:500;color:var(--tx);letter-spacing:-.02em;line-height:1;transition:color .2s}
 .big-timer.running{color:var(--accent)}
 .big-timer.paused{color:var(--amber)}
 .big-timer.done{color:var(--blue)}
@@ -182,6 +182,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .ctrl-row{display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap}
 .cbtn{display:flex;align-items:center;gap:6px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:10px 22px;border-radius:9px;cursor:pointer;border:none;transition:all .13s}
 .cbtn:active{transform:scale(.97)}
+.cbtn-xl{font-size:17px;padding:18px 28px;border-radius:14px;justify-content:center;width:100%;min-height:60px;letter-spacing:.01em}
 .cbtn-start{background:var(--accent);color:#fff}
 .cbtn-start:hover{background:var(--green-600)}
 .cbtn-pause{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
@@ -258,10 +259,73 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+
+/* ETAPAS */
+.etapas-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden}
+.etapas-head{padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--tx);background:var(--bg3)}
+.etapa-row{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--bg3);transition:background .15s}
+.etapa-row:last-child{border-bottom:none}
+.etapa-row:hover{background:var(--bg3)}
+.etapa-row.ea-active{background:var(--accent-light)}
+.etapa-row.ea-done{background:var(--bg3)}
+.etapa-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;transition:all .2s}
+.etapa-dot.ea-active{border-color:var(--accent);background:var(--accent);color:#fff;animation:dbl 1.1s infinite}
+.etapa-dot.ea-done{border-color:var(--blue);background:var(--blue);color:#fff}
+.etapa-bar{width:4px;height:28px;border-radius:2px;flex-shrink:0}
+.etapa-info{flex:1;min-width:0}
+.etapa-nome{font-size:12px;font-weight:600;color:var(--tx);line-height:1.3}
+.etapa-ts{font-size:10px;color:var(--tx3);font-family:'JetBrains Mono',monospace;margin-top:2px;line-height:1.6}
+.etapa-act{flex-shrink:0;display:flex;gap:4px}
+.etapa-btn{font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:5px 11px;border-radius:7px;cursor:pointer;border:none;transition:all .13s;white-space:nowrap}
+.etapa-btn:active{transform:scale(.97)}
+.etb-start{background:var(--accent);color:#fff}
+.etb-start:hover{background:var(--green-600)}
+.etb-finish{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.etb-finish:hover{background:#dbeafe}
+.etb-reopen{background:transparent;color:var(--tx3);border:1px solid var(--bd);padding:4px 8px}
+.etb-reopen:hover{background:var(--bg3);color:var(--tx)}
+.etapa-dot.ea-paused{border-color:var(--amber);background:var(--amber);color:#fff}
+.etapa-row.ea-paused{background:var(--amber-bg)}
+.ea-gestor{background:#f5f3ff;border-left:3px solid #a5b4fc}
+.ea-gestor:hover{background:#ede9fe!important}
+.ea-gestor-dot{background:#6366f1!important;border-color:#6366f1!important;color:#fff;font-size:8px}
+.val-card{background:#f5f3ff;border:1px solid #c7d2fe;border-radius:var(--rl);padding:14px 16px;margin-bottom:18px;box-shadow:var(--shadow)}
+.val-head{font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:10px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.07em}
+.val-item{display:flex;align-items:center;gap:12px;padding:9px 12px;background:var(--bg2);border:1px solid #c7d2fe;border-radius:8px;cursor:pointer;margin-bottom:6px;transition:all .15s}
+.val-item:hover{border-color:#6366f1;transform:translateX(2px)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rxl);padding:28px;width:380px;box-shadow:var(--shadow-lg);animation:fu .2s ease}
+.modal-title{font-size:16px;font-weight:700;color:var(--tx);margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--tx2);margin-bottom:18px;line-height:1.6}
+.modal-etapa-badge{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;margin-bottom:20px}
+.modal-badge-bar{width:5px;height:36px;border-radius:3px;flex-shrink:0}
+.modal-badge-nome{font-size:13px;font-weight:600;color:var(--tx)}
+.modal-badge-num{font-size:11px;color:var(--tx3);margin-top:3px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* P5 etapa badge */
+.p5-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 8px;border-radius:20px;border:1px solid var(--bd);margin-bottom:14px}
+.p5-badge-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.p5-badge-nome{font-size:12px;font-weight:600;color:var(--tx)}
 </style>
 </head>
 <body>
-<div class="shell">
+
+<!-- P0: TELA DE LOGIN -->
+<div id="p0-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:500">
+  <div style="padding:18px 40px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:14px;flex-shrink:0;box-shadow:var(--shadow)">
+    <div style="width:40px;height:40px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">U</div>
+    <div>
+      <div style="font-size:17px;font-weight:700;color:var(--tx);letter-spacing:-.02em">Ulhoa Metais — Produção</div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:1px">Selecione seu perfil para entrar</div>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:32px 40px" id="p0-users"></div>
+</div>
+
+<div class="shell" id="shell" style="display:none">
 
 <aside class="sidebar">
   <div class="sb-logo">
@@ -292,9 +356,13 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     Configurações
   </div>
   <div class="sb-bottom">
+    <div class="sb-item" onclick="logout()" style="color:rgba(255,255,255,.35);font-size:12px;margin-bottom:4px">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M10 3.5a.5.5 0 00-.5-.5h-6a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h6a.5.5 0 00.5-.5V10a.5.5 0 011 0v2.5A1.5 1.5 0 019.5 14h-6A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2h6A1.5 1.5 0 0111 3.5V6a.5.5 0 01-1 0V3.5z"/><path d="M15.854 8.354a.5.5 0 000-.708l-3-3a.5.5 0 10-.708.708L14.293 7.5H5.5a.5.5 0 000 1h8.793l-2.147 2.146a.5.5 0 00.708.708l3-3z"/></svg>
+      Sair
+    </div>
     <div class="sb-user">
-      <div class="sb-av">OP</div>
-      <div><div class="sb-uname">Operador</div><div class="sb-urole">Produção</div></div>
+      <div class="sb-av" id="sb-av">?</div>
+      <div><div class="sb-uname" id="sb-uname">Selecione seu perfil</div><div class="sb-urole" id="sb-urole">—</div></div>
     </div>
   </div>
 </aside>
@@ -322,7 +390,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 
     <!-- P1: LISTAGEM -->
     <div class="page active" id="p1">
-      <div class="stats-row">
+      <div class="stats-row" id="p1-stats">
         <div class="stat-card stat-card-accent">
           <div class="stat-label">Total de Projetos <div class="stat-icon" style="background:rgba(255,255,255,.15);color:#fff"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z"/></svg></div></div>
           <div class="stat-val" id="st-total">—</div>
@@ -345,9 +413,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
           <div class="stat-change">ativos</div>
         </div>
       </div>
-      <div class="section-hdr">
-        <div><div class="section-title">Todos os Projetos</div><div class="section-sub" id="p1-sub">Carregando…</div></div>
-        <div style="display:flex;gap:8px;align-items:center">
+      <div class="section-hdr" id="p1-section-hdr">
+        <div><div class="section-title" id="p1-section-title">Todos os Projetos</div><div class="section-sub" id="p1-sub">Carregando…</div></div>
+        <div id="p1-filter-bar" style="display:flex;gap:8px;align-items:center">
           <select id="f-resp" onchange="renderP1()" style="font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:7px 11px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Todos responsáveis</option></select>
           <select id="f-status" onchange="renderP1()" style="font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:7px 11px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">
             <option value="">Todos status</option>
@@ -379,34 +447,23 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
       <div class="cards-grid" id="p3-body"></div>
     </div>
 
-    <!-- P4: DETALHE DE PRODUÇÃO (timer único + insumos listados) -->
+    <!-- P4: DETALHE DE PRODUÇÃO (etapas + insumos) -->
     <div class="page" id="p4">
       <div class="p4-grid">
         <div class="p4-left">
-          <div class="timer-card">
-            <div class="big-timer" id="big-timer">00:00</div>
-            <div class="big-state-row">
-              <div class="state-dot" id="state-dot"></div>
-              <div class="big-state-txt" id="big-state">aguardando início</div>
+          <div class="etapas-card">
+            <div class="etapas-head">
+              Etapas de Produção
+              <span class="badge b-gray" id="etapas-progress">0 / 16</span>
             </div>
-            <div class="ctrl-row" id="ctrl-row"></div>
-          </div>
-          <div class="hist-card">
-            <div class="hist-head">
-              <div class="hist-head-title">Histórico de Períodos</div>
-              <span class="badge b-gray" id="hist-count">0 períodos</span>
-            </div>
-            <div id="hist-body"><div class="hist-empty">Nenhum período registrado ainda.</div></div>
-            <div id="hist-footer" style="display:none" class="hist-footer"></div>
+            <div id="etapas-body"></div>
           </div>
         </div>
         <div class="p4-right">
-          <!-- Info do produto -->
           <div class="info-card" id="p4-info-card">
             <div class="ic-head">Produto</div>
             <div class="ic-body" id="p4-info-body"></div>
           </div>
-          <!-- Insumos -->
           <div class="info-card" id="p4-insumos-card">
             <div class="ic-head" style="display:flex;align-items:center;justify-content:space-between">
               Insumos
@@ -418,18 +475,105 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
       </div>
     </div>
 
+    <!-- P5: DETALHE DA ETAPA (timer + validação do gestor) -->
+    <div class="page" id="p5">
+      <div class="p4-grid">
+        <div class="p4-left">
+          <div class="timer-card">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px" id="p5-etapa-num">Etapa 1 de 16</div>
+            <div class="p5-badge">
+              <div class="p5-badge-dot" id="p5-badge-dot"></div>
+              <span class="p5-badge-nome" id="p5-badge-nome"></span>
+            </div>
+            <div class="big-timer" id="p5-timer">00:00</div>
+            <div class="big-state-row" id="p5-state-row">
+              <div class="state-dot" id="p5-state-dot"></div>
+              <div class="big-state-txt" id="p5-state-txt">aguardando início</div>
+            </div>
+            <div class="ctrl-row" id="p5-ctrl"></div>
+          </div>
+        </div>
+        <div class="p4-right">
+          <div class="info-card">
+            <div class="ic-head">Etapa</div>
+            <div class="ic-body" id="p5-etapa-body"></div>
+          </div>
+          <div class="info-card">
+            <div class="ic-head">Produto</div>
+            <div class="ic-body" id="p5-prod-body"></div>
+          </div>
+          <div class="info-card">
+            <div class="ic-head">Observações</div>
+            <div class="ic-body" style="padding:10px">
+              <textarea id="p5-obs" oninput="saveObs()" placeholder="Adicione observações sobre esta etapa…" style="width:100%;min-height:90px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--tx);background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px;resize:vertical;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 </div>
+
+
 <div class="toast" id="toast"></div>
 
 <script>
 const API='https://ulhoa-0a02024d350a.herokuapp.com/api/propostas';
+const PROD_API='https://app-producao-b843a894d7ea.herokuapp.com'; // backend de produção (MongoDB)
+const _saveTimer={};
+
+const USUARIOS=[
+  {id:'luizao',nome:'Luiz Fernando Lima',apelido:'Luizão',cargo:'Coordenador de Produção',setor:'Coordenação',role:'gestor'},
+  {id:'davidson',nome:'Davidson Junio Pereira Maciel',cargo:'Serralheiro Montador',setor:'Serralheria',role:'operador'},
+  {id:'dionata',nome:'Dionata Alan Silva Costa',cargo:'Serralheiro Montador I',setor:'Serralheria',role:'operador'},
+  {id:'ednaldo',nome:'Ednaldo Gomes Filho',cargo:'Serralheiro Montador III',setor:'Serralheria',role:'operador'},
+  {id:'erivaldo',nome:'Erivaldo Amaro de Almeida',cargo:'Serralheiro Montador III',setor:'Serralheria',role:'operador'},
+  {id:'leonardo',nome:'Leonardo Sousa Oliveira',cargo:'Serralheiro Montador III',setor:'Serralheria',role:'operador'},
+  {id:'roberto',nome:'Roberto Martins do Nascimento',cargo:'Serralheiro Montador',setor:'Serralheria',role:'operador'},
+  {id:'rodrigo_bc',nome:'Rodrigo Brito Cardoso',cargo:'Serralheiro Montador III',setor:'Serralheria',role:'operador'},
+  {id:'ronan',nome:'Ronan Gomes de Souza Lima',cargo:'Serralheiro Montador',setor:'Serralheria',role:'operador'},
+  {id:'sebastiao',nome:'Sebastião dos Reis de Matos',cargo:'Serralheiro Montador III',setor:'Serralheria',role:'operador'},
+  {id:'matheus',nome:'Matheus Henrique Souza Braga',cargo:'Ajudante de Serralheiro',setor:'Serralheria',role:'operador'},
+  {id:'osvaldo',nome:'Osvaldo Paura Oliveira',cargo:'Ajudante de Serralheiro',setor:'Serralheria',role:'operador'},
+  {id:'gilmar',nome:'José Gilmar Pinheiro',cargo:'Polidor Instrutor',setor:'Polimento',role:'operador'},
+  {id:'fernando',nome:'Fernando Pereira de Souza Junior',cargo:'Polidor 2',setor:'Polimento',role:'operador'},
+  {id:'sergio',nome:'Sergio Ricardo Pio',cargo:'Polidor 2',setor:'Polimento',role:'operador'},
+  {id:'jose_carlos',nome:'José Carlos Soares da Cruz',cargo:'Instalador Externo',setor:'Instalação',role:'operador'},
+  {id:'rodrigo_ns',nome:'Rodrigo Nobre dos Santos',cargo:'Torneiro',setor:'Torneiro',role:'operador'},
+];
+
+const ETAPAS_PROD=[
+  {nome:'Supervisor de Produção',cor:'#fca5a5'},
+  {nome:'Desenho',cor:'#e5e7eb'},
+  {nome:'Solicitar materiais no estoque',cor:'#fde68a'},
+  {nome:'Corte',cor:'#e5e7eb'},
+  {nome:'Pré-solda',cor:'#fca5a5'},
+  {nome:'Acabamento',cor:'#e5e7eb'},
+  {nome:'Montagem',cor:'#e5e7eb'},
+  {nome:'Acabamento final',cor:'#e5e7eb'},
+  {nome:'Enviado para pintura (se tiver)',cor:'#e5e7eb'},
+  {nome:'Receb. da pintura - pronto p/ inst.',cor:'#e5e7eb'},
+  {nome:'Pronto - agendar início instalação',cor:'#e5e7eb'},
+  {nome:'Instalação / Entrega estrutura',cor:'#d8b4fe'},
+  {nome:'Aguardando vidro',cor:'#e5e7eb'},
+  {nome:'Instalação vidro',cor:'#fde68a'},
+  {nome:'Manutenção',cor:'#e5e7eb'},
+  {nome:'100% da instalação finalizada',cor:'#bbf7d0'},
+];
+// 32 etapas: cada etapa de produção seguida de validação do Luizão
+const ETAPAS=ETAPAS_PROD.flatMap((e,i)=>[
+  {...e,tipo:'producao',prodIdx:i},
+  {nome:'Validação — Luizão',cor:'#a5b4fc',tipo:'gestor',prodIdx:i,gestorFor:e.nome,nextProd:ETAPAS_PROD[i+1]?.nome||null},
+]);
+const TOTAL_PROD=ETAPAS_PROD.length;
+
 let allData=[],curPage=1,totPages=1;
-let curProj=null,curGrupo=null,curProd=null,curKey=null;
-// Chave agora é por PRODUTO (grupo), não por insumo individual
-const pState={}; // key->{state,baseElapsed,startAt}
-const pPeriods={}; // key->[{start,end}]
+let curProj=null,curGrupo=null,curProd=null,curKey=null,curEtapaIdx=null;
+let _p5Raf=null,currentUser=null;
+const pState={};
+const pEtapas={}; // key->[{state,baseElapsed,startAt,firstStartAt,endAt,assignedTo}]
 
 const $=id=>document.getElementById(id);
 function toast(m){const e=$('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2400)}
@@ -446,100 +590,299 @@ function bTxt(s){if(!s)return s;if(s.includes('Iniciado'))return'Iniciado';if(s.
 function prodKey(propId,grupoId,prodNome){return`${propId}__${grupoId}__${encodeURIComponent(prodNome)}`}
 function getElapsed(k){const s=pState[k];if(!s)return 0;if(s.state==='running')return s.baseElapsed+(Date.now()-s.startAt)/1000;return s.baseElapsed||0}
 
-// ── RAF ──
-let _raf=null;
-function timerLoop(){
-  const now=Date.now();let any=false;
-  Object.keys(pState).forEach(k=>{
-    const s=pState[k];if(s.state!=='running')return;any=true;
-    if(k===curKey){const el=$('big-timer');if(el)el.textContent=fmtTime(s.baseElapsed+(now-s.startAt)/1000)}
-    const sm=document.getElementById('sm-'+k);if(sm)sm.textContent=fmtTime(s.baseElapsed+(now-s.startAt)/1000);
-  });
-  if(any)_raf=requestAnimationFrame(timerLoop);else _raf=null;
+// ── Etapas ──
+function getEtapas(k){
+  if(!pEtapas[k])pEtapas[k]=ETAPAS.map(()=>({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null}));
+  return pEtapas[k];
 }
-function ensureLoop(){if(!_raf)_raf=requestAnimationFrame(timerLoop)}
-
-// ── Controls ──
-function iniciar(k){
-  if(!pState[k])pState[k]={state:'idle',baseElapsed:0,startAt:0};
-  const s=pState[k];if(s.state==='running')return;
-  s.state='running';s.startAt=Date.now();
-  if(!pPeriods[k])pPeriods[k]=[];
-  pPeriods[k].push({start:Date.now(),end:null});
-  toast('Produção iniciada');ensureLoop();
-  if(k===curKey){$('big-timer').className='big-timer running';$('big-state').textContent='em andamento';$('state-dot').className='state-dot running';renderCtrl();renderHist()}
-  updateDot(k);
+function derivedState(k){
+  const e=getEtapas(k);
+  if(e.every(x=>x.state==='done'))return'done';
+  if(e.some(x=>x.state==='active'))return'running';
+  if(e.some(x=>x.state==='paused'||x.state==='done'))return'paused';
+  return'idle';
 }
-function pausar(k){
-  const s=pState[k];if(!s||s.state!=='running')return;
-  s.baseElapsed=getElapsed(k);s.state='paused';
-  const ps=pPeriods[k];if(ps?.length)ps[ps.length-1].end=Date.now();
-  toast('Pausado — '+fmtTime(s.baseElapsed));
-  if(k===curKey){$('big-timer').textContent=fmtTime(s.baseElapsed);$('big-timer').className='big-timer paused';$('big-state').textContent='pausado';$('state-dot').className='state-dot paused';renderCtrl();renderHist()}
-  updateDot(k);
-}
-function retomar(k){
-  const s=pState[k];if(!s||s.state!=='paused')return;
-  s.state='running';s.startAt=Date.now();
-  if(!pPeriods[k])pPeriods[k]=[];
-  pPeriods[k].push({start:Date.now(),end:null});
-  toast('Retomado');ensureLoop();
-  if(k===curKey){$('big-timer').className='big-timer running';$('big-state').textContent='em andamento';$('state-dot').className='state-dot running';renderCtrl();renderHist()}
-  updateDot(k);
-}
-function concluir(k){
-  const s=pState[k];if(!s)return;
-  if(s.state==='running'){s.baseElapsed=getElapsed(k);const ps=pPeriods[k];if(ps?.length)ps[ps.length-1].end=Date.now()}
-  s.state='done';toast('Concluído ✓');
-  if(k===curKey){$('big-timer').textContent=fmtTime(s.baseElapsed);$('big-timer').className='big-timer done';$('big-state').textContent='concluído';$('state-dot').className='state-dot done';renderCtrl();renderHist()}
-  updateDot(k);updateProgresso();
-}
-function reabrir(k){
-  const s=pState[k];if(!s)return;
-  s.state='idle';s.baseElapsed=0;s.startAt=0;
-  if(pPeriods[k])pPeriods[k]=[];
-  toast('Item reaberto');
-  if(k===curKey){$('big-timer').textContent='00:00';$('big-timer').className='big-timer';$('big-state').textContent='aguardando início';$('state-dot').className='state-dot';renderCtrl();renderHist()}
-  updateDot(k);updateProgresso();
+function prodDone(k){return getEtapas(k).filter((x,i)=>ETAPAS[i]?.tipo==='producao'&&x.state==='done').length;}
+function renderEtapas(){
+  const k=curKey;const e=getEtapas(k);
+  const doneCount=prodDone(k);
+  $('etapas-progress').textContent=doneCount+' / '+TOTAL_PROD;
+  $('etapas-body').innerHTML=e.map((es,i)=>{
+    const cfg=ETAPAS[i];
+    const isGestor=cfg.tipo==='gestor';
+    const isActive=es.state==='active',isDone=es.state==='done',isPaused=es.state==='paused';
+    const dotCls='etapa-dot'+(isGestor?' ea-gestor-dot':isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
+    const rowCls='etapa-row'+(isGestor?' ea-gestor':isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
+    let badge='';
+    if(isDone)badge=`<span class="badge b-blue">✓</span>`;
+    else if(isActive&&!isGestor)badge=`<span class="badge b-green">Em andamento</span>`;
+    else if(isPaused&&!isGestor)badge=`<span class="badge b-amber">Pausada</span>`;
+    else if(isGestor&&!isDone){
+      const prevDone=i>0&&e[i-1]?.state==='done';
+      badge=prevDone?`<span class="badge" style="background:#e0e7ff;color:#4f46e5;border-color:#a5b4fc">Aguardando</span>`:
+        `<span class="badge b-gray">Bloqueada</span>`;
+    }
+    const assignedOp=es.assignedTo?USUARIOS.find(u=>u.id===es.assignedTo):null;
+    const subLabel=isGestor?'Luizão':assignedOp?(assignedOp.apelido||assignedOp.nome.split(' ')[0]):'';
+    return`<div class="${rowCls}" onclick="openEtapa(${i})" style="cursor:pointer">
+      <div class="${dotCls}">${isDone?'✓':isGestor?'G':''}</div>
+      <div class="etapa-bar" style="background:${cfg.cor}"></div>
+      <div class="etapa-info">
+        <div class="etapa-nome">${cfg.nome}</div>
+        ${subLabel?`<div class="etapa-ts">${subLabel}</div>`:''}
+      </div>
+      <div class="etapa-act" style="gap:8px">${badge}<div class="arrow-btn" style="width:22px;height:22px;font-size:12px;flex-shrink:0">›</div></div>
+    </div>`;
+  }).join('');
 }
 function updateDot(k){
-  const state=pState[k]?.state||'idle';
+  const state=derivedState(k);
+  if(!pState[k])pState[k]={state:'idle'};
+  pState[k].state=state;
   const dot=document.getElementById('dot-'+k);if(dot)dot.className='dot '+state;
   const row=document.getElementById('pr-'+k);
   if(row)row.className='prod-card'+(state==='running'?' st-running':state==='done'?' st-done':state==='paused'?' st-paused':'');
   const sm=document.getElementById('sm-'+k);
-  if(sm){sm.className='sm-timer '+(state==='idle'?'':state);sm.textContent=state==='idle'?'':fmtTime(getElapsed(k))}
+  if(sm){
+    const dc=prodDone(k);
+    sm.className='sm-timer '+(state==='idle'?'':state);
+    sm.textContent=state==='idle'?'':dc+'/'+TOTAL_PROD;
+  }
 }
-function renderCtrl(){
-  const k=curKey;const state=pState[k]?.state||'idle';
+
+// ── P5: timer por etapa ──
+function etapaElapsed(k,i){
+  const e=getEtapas(k)[i];if(!e||e.state==='pending')return 0;
+  if(e.state==='active')return e.baseElapsed+(Date.now()-e.startAt)/1000;
+  return e.baseElapsed||0;
+}
+function p5Loop(){
+  if(curKey===null||curEtapaIdx===null){_p5Raf=null;return;}
+  const e=getEtapas(curKey)[curEtapaIdx];
+  if(e?.state==='active'){
+    const el=$('p5-timer');if(el)el.textContent=fmtTime(etapaElapsed(curKey,curEtapaIdx));
+    _p5Raf=requestAnimationFrame(p5Loop);
+  }else{_p5Raf=null;}
+}
+function startP5Loop(){if(!_p5Raf)_p5Raf=requestAnimationFrame(p5Loop);}
+function renderP5State(){
+  const k=curKey,i=curEtapaIdx;const cfg=ETAPAS[i];
+  const isGestor=cfg?.tipo==='gestor';
+  const timerEl=$('p5-timer'),stRow=$('p5-state-row');
+  if(isGestor){
+    if(timerEl)timerEl.style.display='none';
+    if(stRow)stRow.style.display='none';
+    return;
+  }
+  if(timerEl)timerEl.style.display='block';
+  if(stRow)stRow.style.display='flex';
+  const e=getEtapas(k)[i];const s=e?.state||'pending';
+  if(timerEl){timerEl.textContent=fmtTime(etapaElapsed(k,i));timerEl.className='big-timer'+(s==='active'?' running':s==='paused'?' paused':s==='done'?' done':'');}
+  const dot=$('p5-state-dot');if(dot)dot.className='state-dot'+(s==='active'?' running':s==='paused'?' paused':s==='done'?' done':'');
+  const txt=$('p5-state-txt');if(txt)txt.textContent=s==='active'?'em andamento':s==='paused'?'pausado':s==='done'?'concluído':'aguardando início';
+}
+function renderP5Ctrl(){
+  const k=curKey,i=curEtapaIdx;const cfg=ETAPAS[i];
+  const e=getEtapas(k)[i];const s=e?.state||'pending';
+  const isGestor=cfg?.tipo==='gestor';
+  if(isGestor){
+    if(currentUser?.role==='gestor'){
+      if(s==='done'){
+        const op=USUARIOS.find(u=>u.id===e.assignedTo);
+        const nextCfg=ETAPAS[i+1];
+        $('p5-ctrl').innerHTML=`<span style="font-size:12px;color:var(--blue);font-weight:600">✓ Validado — ${nextCfg?nextCfg.nome+' atribuída a ':''}${op?op.nome.split(' ')[0]:'operador'}</span>`;
+      }else{
+        const nextCfg=ETAPAS[i+1];
+        const nextLabel=nextCfg?nextCfg.nome:'(produto finalizado)';
+        const opOpts=USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')} — ${u.cargo}</option>`).join('');
+        $('p5-ctrl').innerHTML=`<div style="width:100%;max-width:300px;text-align:left">
+          <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Próxima etapa</div>
+          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:14px">${nextLabel}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Atribuir para</div>
+          <select id="p5-op-sel" style="width:100%;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none;margin-bottom:12px"><option value="">Selecionar operador…</option>${opOpts}</select>
+          <button class="cbtn cbtn-start" style="width:100%;justify-content:center" onclick="gestorValidar()">✓ Validar e atribuir</button>
+        </div>`;
+      }
+    }else{
+      $('p5-ctrl').innerHTML=`<div style="text-align:center;padding:12px 0"><div style="font-size:28px;margin-bottom:10px">⏳</div><div style="font-size:13px;color:var(--tx2);font-weight:600">Aguardando validação do Luizão</div><div style="font-size:11px;color:var(--tx3);margin-top:4px">O coordenador irá liberar a próxima etapa</div></div>`;
+    }
+    return;
+  }
+  // Etapa de produção
+  const isMyTask=currentUser?.role==='gestor'||!e.assignedTo||e.assignedTo===currentUser?.id;
   let h='';
-  if(state==='idle')h=`<button class="cbtn cbtn-start" onclick="iniciar('${k}')">▶ Iniciar</button>`;
-  else if(state==='running')h=`<button class="cbtn cbtn-pause" onclick="pausar('${k}')">⏸ Pausar</button><button class="cbtn cbtn-finish" onclick="concluir('${k}')">✓ Concluir</button>`;
-  else if(state==='paused')h=`<button class="cbtn cbtn-resume" onclick="retomar('${k}')">▶ Retomar</button><button class="cbtn cbtn-finish" onclick="concluir('${k}')">✓ Concluir</button>`;
-  else h=`<button class="cbtn cbtn-reopen" onclick="reabrir('${k}')">↩ Reabrir</button>`;
-  $('ctrl-row').innerHTML=h;
-}
-function renderHist(){
-  const k=curKey;const ps=pPeriods[k]||[];
-  $('hist-count').textContent=ps.length+' período'+(ps.length!==1?'s':'');
-  if(!ps.length){$('hist-body').innerHTML='<div class="hist-empty">Nenhum período registrado ainda.</div>';$('hist-footer').style.display='none';return}
-  let total=0;
-  $('hist-body').innerHTML=ps.map((p,i)=>{
-    const dur=p.end?(p.end-p.start)/1000:null;
-    if(dur!==null)total+=dur;
-    return`<div class="hist-item">
-      <div class="hist-idx">${i+1}</div>
-      <div><div class="hist-range">${fmtTs(p.start)} → ${p.end?fmtTs(p.end):'<span style="color:var(--accent)">agora</span>'}</div><div class="hist-date">${fmtDate(p.start)}</div></div>
-      <div class="${!p.end?'hist-ongoing':'hist-dur'}">${!p.end?'em curso…':fmtTime(dur)}</div>
+  if(s==='done'){
+    h=`<div style="text-align:center;padding:10px 0">
+      <div style="font-size:32px;margin-bottom:6px">✓</div>
+      <div style="font-size:14px;color:var(--blue);font-weight:700">Etapa concluída</div>
     </div>`;
-  }).join('');
-  const run=pState[k]?.state==='running';
-  $('hist-footer').style.display='flex';
-  $('hist-footer').innerHTML=`
-    <div class="hf-item"><div class="hf-val">${ps.length}</div><div class="hf-lbl">Períodos</div></div>
-    <div class="hf-item"><div class="hf-val">${fmtTime(total)}</div><div class="hf-lbl">Tempo total</div></div>
-    <div class="hf-item"><div class="hf-val" style="color:${run?'var(--accent)':'var(--tx3)'}">${run?'Ativo':'Parado'}</div><div class="hf-lbl">Status</div></div>
-  `;
+  } else if(!isMyTask){
+    const op=USUARIOS.find(u=>u.id===e.assignedTo);
+    h=`<div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px 0">Atribuída a <b>${op?op.nome.split(' ')[0]:'outro operador'}</b></div>`;
+  } else if(s==='pending'){
+    h=`<button class="cbtn cbtn-start cbtn-xl" onclick="p5Iniciar()">▶ Iniciar</button>`;
+  } else if(s==='active'){
+    h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="cbtn cbtn-pause cbtn-xl" onclick="p5Pausar()">⏸ Pausar</button>
+      <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="p5Encerrar()">■ Encerrar etapa</button>
+    </div>`;
+  } else if(s==='paused'){
+    h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="cbtn cbtn-resume cbtn-xl" onclick="p5Retomar()">▶ Retomar</button>
+      <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="p5Encerrar()">■ Encerrar etapa</button>
+    </div>`;
+  }
+  // ── Histórico de tempo ──
+  const elapsed=etapaElapsed(k,i);
+  const hasHistory=e.firstStartAt||e.endAt||elapsed>0;
+  let hist='';
+  if(hasHistory){
+    hist+=`<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd);width:100%;text-align:left">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Histórico de tempo</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        ${e.firstStartAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
+          <span style="color:var(--tx3)">Início</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span>
+        </div>`:''}
+        ${e.endAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
+          <span style="color:var(--tx3)">Conclusão</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span>
+        </div>`:''}
+        ${elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)">
+          <span style="color:var(--tx)">Total</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${fmtTime(elapsed)}</span>
+        </div>`:''}
+      </div>
+      ${currentUser?.role==='gestor'?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
+        <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Ajustar tempo</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="p5-adj-inp" type="text" placeholder="${fmtTime(elapsed)}"
+            style="flex:1;font-size:14px;font-family:'JetBrains Mono',monospace;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;text-align:center">
+          <button class="cbtn" style="padding:8px 12px;font-size:12px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);white-space:nowrap" onclick="p5AjustarTempo()">Aplicar</button>
+        </div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:4px;text-align:center">formato: h:mm:ss ou mm:ss</div>
+      </div>`:''}
+    </div>`;
+  }
+  $('p5-ctrl').innerHTML=h+hist;
+}
+function p5Iniciar(){
+  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
+  if(e.state!=='pending')return;
+  e.state='active';e.startAt=Date.now();e.firstStartAt=Date.now();e.baseElapsed=0;
+  if(!e.assignedTo&&currentUser)e.assignedTo=currentUser.id;
+  if(!pState[k])pState[k]={state:'idle'};pState[k].state='running';
+  saveProducaoState(k);
+  toast('Etapa iniciada');renderP5State();renderP5Ctrl();updateDot(k);startP5Loop();
+}
+function p5Pausar(){
+  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
+  if(e.state!=='active')return;
+  e.baseElapsed=etapaElapsed(k,i);e.state='paused';
+  if(!pState[k])pState[k]={state:'idle'};pState[k].state='paused';
+  saveProducaoState(k);
+  toast('Pausado — '+fmtTime(e.baseElapsed));renderP5State();renderP5Ctrl();updateDot(k);
+}
+function p5Retomar(){
+  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
+  if(e.state!=='paused')return;
+  e.state='active';e.startAt=Date.now();
+  if(!pState[k])pState[k]={state:'idle'};pState[k].state='running';
+  saveProducaoState(k);
+  toast('Retomado');renderP5State();renderP5Ctrl();updateDot(k);startP5Loop();
+}
+function p5Encerrar(){
+  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
+  if(e.state!=='active'&&e.state!=='paused')return;
+  e.baseElapsed=etapaElapsed(k,i);e.state='done';e.endAt=Date.now();
+  _p5Raf=null;
+  if(!pState[k])pState[k]={state:'idle'};
+  pState[k].state=derivedState(k);
+  updateDot(k);updateProgresso();
+  saveProducaoState(k, 0); // salva imediatamente ao encerrar
+  const nextIdx=i+1;
+  // Operador: volta para "Minhas Tarefas" para ver próxima demanda
+  if(currentUser?.role==='operador'){
+    const msg=nextIdx<ETAPAS.length?'Etapa concluída ✓ — aguardando validação do Luizão':'Produto concluído! ✓ Veja suas próximas tarefas';
+    toast(msg);
+    setTimeout(()=>navToMinhasTarefas(),800);
+    return;
+  }
+  if(nextIdx<ETAPAS.length){
+    toast('Etapa concluída — aguardando validação do Luizão');
+    openEtapa(nextIdx);
+  }else{
+    toast('Produto 100% concluído! ✓');
+    openProd(curProd);
+  }
+}
+function gestorValidar(){
+  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
+  const opId=$('p5-op-sel')?.value;
+  if(!opId){toast('Selecione um operador para atribuir');return;}
+  e.state='done';e.endAt=Date.now();
+  const nextE=getEtapas(k)[i+1];if(nextE)nextE.assignedTo=opId;
+  if(!pState[k])pState[k]={state:'idle'};pState[k].state=derivedState(k);
+  updateDot(k);updateProgresso();
+  const op=USUARIOS.find(u=>u.id===opId);
+  const nextCfg=ETAPAS[i+1];
+  saveProducaoState(k, 0);
+  toast('Validado ✓ — '+(nextCfg?.nome||'etapa')+' atribuída a '+(op?.nome.split(' ')[0]||opId));
+  if(i+1<ETAPAS.length)openEtapa(i+1);else openProd(curProd);
+}
+function p5AjustarTempo(){
+  if(currentUser?.role!=='gestor')return;
+  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
+  const inp=$('p5-adj-inp');if(!inp||!inp.value.trim())return;
+  const parts=inp.value.trim().split(':').map(Number);
+  let secs=0;
+  if(parts.length===3)secs=(parts[0]||0)*3600+(parts[1]||0)*60+(parts[2]||0);
+  else if(parts.length===2)secs=(parts[0]||0)*60+(parts[1]||0);
+  else secs=parts[0]||0;
+  if(isNaN(secs)||secs<0){toast('Formato inválido — use h:mm:ss ou mm:ss');return;}
+  e.baseElapsed=secs;
+  if(e.state==='active')e.startAt=Date.now();// reancora o startAt para baseElapsed acumule corretamente
+  const timerEl=$('p5-timer');if(timerEl)timerEl.textContent=fmtTime(secs);
+  inp.value='';inp.placeholder=fmtTime(secs);
+  toast('⏱ Tempo ajustado para '+fmtTime(secs));
+  renderP5Ctrl();
+}
+function openEtapa(idx){
+  if(!curProj||!curGrupo||!curProd||curKey===null)return;
+  _p5Raf=null;curEtapaIdx=idx;
+  const k=curKey,cfg=ETAPAS[idx],e=getEtapas(k)[idx];
+  const isGestor=cfg.tipo==='gestor';
+  $('p5-etapa-num').textContent=(isGestor?'Validação':'Etapa '+(cfg.prodIdx+1))+' de '+TOTAL_PROD;
+  $('p5-badge-dot').style.background=cfg.cor;
+  $('p5-badge-nome').textContent=cfg.nome;
+  renderP5State();renderP5Ctrl();
+  const assignedOp=e.assignedTo?USUARIOS.find(u=>u.id===e.assignedTo):null;
+  $('p5-etapa-body').innerHTML=`<div class="ic-row">
+    <div class="ic-field"><div class="ic-label">Etapa</div><div class="ic-value">${cfg.nome}</div></div>
+    ${isGestor?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Valida</div><div class="ic-value" style="font-size:13px">${cfg.gestorFor}</div></div>`:''}
+    ${isGestor&&cfg.nextProd?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Próxima</div><div class="ic-value" style="font-size:13px">${cfg.nextProd}</div></div>`:''}
+    ${assignedOp?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Operador</div><div class="ic-value" style="font-size:13px">${assignedOp.nome}</div></div>`:''}
+    ${e.firstStartAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Início</div><div class="ic-value" style="font-size:12px;font-family:'JetBrains Mono',monospace">${fmtTs(e.firstStartAt)} ${fmtDate(e.firstStartAt)}</div></div>`:''}
+    ${e.endAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Conclusão</div><div class="ic-value" style="font-size:12px;font-family:'JetBrains Mono',monospace">${fmtTs(e.endAt)} ${fmtDate(e.endAt)}</div></div>`:''}
+  </div>`;
+  const pedNum=curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta;
+  $('p5-prod-body').innerHTML=`<div class="ic-row">
+    <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${curProd.nome}</div></div>
+    <div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${curGrupo.nome}</div></div>
+    <div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${pedNum}</div></div>
+    <div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">Cliente</div><div class="ic-value" style="font-size:13px">${curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—'}</div></div>
+  </div>`;
+  // Load saved observation
+  const obsEl=$('p5-obs');if(obsEl)obsEl.value=localStorage.getItem('obs_'+k+'_'+idx)||'';
+  if(!isGestor&&e.state==='active')startP5Loop();
+  const prodLabel=curProd.nome.slice(0,15)+(curProd.nome.length>15?'…':'');
+  const etapaLabel=cfg.nome.slice(0,16)+(cfg.nome.length>16?'…':'');
+  const p1Label=currentUser?.role==='operador'?'Minhas Tarefas':'Pedidos';
+  setBread([{label:p1Label,pg:'p1'},{label:pedNum,pg:'p2'},{label:curGrupo.nome,pg:'p3'},{label:prodLabel,pg:'p4'},{label:etapaLabel,active:true}]);
+  setTitle(cfg.nome);showPage('p5');
 }
 function updateProgresso(){
   if(!curProj||!curGrupo)return;
@@ -585,9 +928,14 @@ function setBread(items){
 }
 function setTitle(t){$('tb-title').textContent=t}
 function navTo(pg){
-  if(pg==='p1'){curProj=null;curGrupo=null;curProd=null;curKey=null;setBread([{label:'Projetos',active:true}]);setTitle('Dashboard');showPage('p1')}
+  if(pg==='p1'){
+    curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+    if(currentUser?.role==='operador'){navToMinhasTarefas();return;}
+    setBread([{label:'Projetos',active:true}]);setTitle('Dashboard');renderP1();showPage('p1');
+  }
   else if(pg==='p2'&&curProj)openProj(curProj);
   else if(pg==='p3'&&curGrupo)openGrupo(curGrupo._id);
+  else if(pg==='p4'&&curProd){curEtapaIdx=null;_p5Raf=null;openProd(curProd);}
 }
 
 function openProj(proj){
@@ -648,7 +996,8 @@ function openGrupo(grupoId){
   $('p3-sub').textContent=`${prods.length} produto${prods.length!==1?'s':`s`} · clique para iniciar produção`;
   $('p3-body').innerHTML=prods.map(prod=>{
     const k=prod.key;
-    const s=pState[k];const state=s?.state||'idle';
+    const state=derivedState(k);
+    const doneCount=getEtapas(k).filter(x=>x.state==='done').length;
     const insCnt=prod.insumos?.length||0;
     return`<div class="prod-card${state==='running'?' st-running':state==='done'?' st-done':state==='paused'?' st-paused':''}" id="pr-${k}" onclick="openProd(${JSON.stringify(prod).replace(/"/g,'&quot;')})">
       <div class="prod-ico">${prodIco(prod.nome)}</div>
@@ -657,11 +1006,10 @@ function openGrupo(grupoId){
         <div class="grupo-amb">${insCnt} insumo${insCnt!==1?'s':''}</div>
       </div>
       <div class="dot ${state}" id="dot-${k}"></div>
-      <div class="sm-timer ${state==='idle'?'':state}" id="sm-${k}">${state==='idle'?'':fmtTime(getElapsed(k))}</div>
+      <div class="sm-timer ${state==='idle'?'':state}" id="sm-${k}">${state==='idle'?'':doneCount+'/'+ETAPAS.length}</div>
       <div class="arrow-btn">›</div>
     </div>`;
   }).join('')||'<div class="empty-state">Nenhum produto</div>';
-  ensureLoop();
   setBread([{label:'Projetos',pg:'p1'},{label:`#${curProj.numeroProposta}`,pg:'p2'},{label:grupo.nome,active:true}]);
   setTitle(grupo.nome);showPage('p3');
 }
@@ -669,15 +1017,7 @@ function openGrupo(grupoId){
 function openProd(prod){
   if(!curProj||!curGrupo)return;
   curProd=prod;curKey=prod.key;
-  if(!pState[curKey])pState[curKey]={state:'idle',baseElapsed:0,startAt:0};
-  const s=pState[curKey];const state=s.state;
-  const bigT=$('big-timer');
-  bigT.textContent=fmtTime(getElapsed(curKey));
-  bigT.className='big-timer'+(state==='running'?' running':state==='paused'?' paused':state==='done'?' done':'');
-  $('big-state').textContent=state==='running'?'em andamento':state==='paused'?'pausado':state==='done'?'concluído':'aguardando início';
-  $('state-dot').className='state-dot'+(state==='running'?' running':state==='paused'?' paused':state==='done'?' done':'');
-
-  // Info card
+  if(!pState[curKey])pState[curKey]={state:'idle'};
   $('p4-info-body').innerHTML=`
     <div class="ic-row">
       <div class="ic-field"><div class="ic-label">Nome</div><div class="ic-value">${prod.nome}</div></div>
@@ -688,8 +1028,6 @@ function openProd(prod){
       <div class="ic-div"></div>
       <div class="ic-field"><div class="ic-label">Projeto</div><div class="ic-value" style="font-size:13px">#${curProj.numeroProposta} — ${curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—'}</div></div>
     </div>`;
-
-  // Insumos list
   const insumos=prod.insumos||[];
   $('insumos-count').textContent=insumos.length+' insumo'+(insumos.length!==1?'s':'');
   $('p4-insumos-body').innerHTML=insumos.length?insumos.map((ins,i)=>`
@@ -702,54 +1040,378 @@ function openProd(prod){
       <div class="insumo-qtd">Qtd ${ins.quantidade}</div>
     </div>`).join('')
   :'<div class="hist-empty">Sem insumos</div>';
-
-  renderCtrl();renderHist();ensureLoop();
+  renderEtapas();
   const label=prod.nome.slice(0,22)+(prod.nome.length>22?'…':'');
   setBread([{label:'Projetos',pg:'p1'},{label:`#${curProj.numeroProposta}`,pg:'p2'},{label:curGrupo.nome,pg:'p3'},{label:label,active:true}]);
   setTitle(prod.nome);showPage('p4');
 }
 
+// ── Login / Auth ──
+function renderLogin(){
+  const ORDEM=['Coordenação','Serralheria','Polimento','Instalação','Torneiro'];
+  const bySetor={};
+  USUARIOS.forEach(u=>{if(!bySetor[u.setor])bySetor[u.setor]=[];bySetor[u.setor].push(u)});
+  $('p0-users').innerHTML=ORDEM.filter(s=>bySetor[s]).map(s=>`
+    <div style="margin-bottom:36px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">${s}</div>
+        <div style="flex:1;height:1px;background:var(--bd)"></div>
+        <div style="font-size:11px;color:var(--tx3)">${bySetor[s].length} pessoa${bySetor[s].length!==1?'s':''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+        ${bySetor[s].map(u=>`<div onclick="loginAs('${u.id}')"
+          onmouseover="this.style.background='var(--accent-light)';this.style.borderColor='var(--accent)';this.style.boxShadow='var(--shadow-md)';this.style.transform='translateY(-3px)'"
+          onmouseout="this.style.background='var(--bg2)';this.style.borderColor='var(--bd)';this.style.boxShadow='var(--shadow)';this.style.transform=''"
+          style="background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:20px 14px 16px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;box-shadow:var(--shadow)">
+          <div style="width:52px;height:52px;border-radius:50%;background:${u.role==='gestor'?'var(--accent)':'var(--green-700)'};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.15)">${initials(u.nome)}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--tx);line-height:1.2">${u.apelido||u.nome.split(' ')[0]}</div>
+            <div style="font-size:10px;color:var(--tx3);margin-top:4px;line-height:1.4">${u.cargo}</div>
+          </div>
+          ${u.role==='gestor'?'<span style="font-size:9px;padding:3px 10px;border-radius:20px;background:var(--accent);color:#fff;font-weight:700;letter-spacing:.05em">GESTOR</span>':'<span style="font-size:9px;padding:3px 10px;border-radius:20px;background:var(--bg3);color:var(--tx3);font-weight:600;letter-spacing:.03em">OPERADOR</span>'}
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function loginAs(userId){
+  currentUser=USUARIOS.find(u=>u.id===userId);if(!currentUser)return;
+  $('p0-screen').style.display='none';
+  $('shell').style.display='flex';
+  const av=$('sb-av'),nm=$('sb-uname'),rl=$('sb-urole');
+  if(av)av.textContent=initials(currentUser.nome);
+  if(nm)nm.textContent=currentUser.apelido||currentUser.nome.split(' ')[0];
+  if(rl)rl.textContent=currentUser.cargo;
+  if(currentUser.role==='operador')navToMinhasTarefas();
+  else{setBread([{label:'Projetos',active:true}]);setTitle('Dashboard');renderP1();showPage('p1');}
+}
+function logout(){
+  currentUser=null;_p5Raf=null;curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;
+  $('shell').style.display='none';
+  $('p0-screen').style.display='flex';
+}
+
+// ── Minhas Tarefas (operador) ──
+function navToMinhasTarefas(){
+  curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  setBread([{label:'Minhas Tarefas',active:true}]);setTitle('Minhas Tarefas');
+  renderMinhasTarefas();showPage('p1');
+}
+function getMinhasTarefas(){
+  const tasks=[];
+  allData.forEach(proj=>{
+    (proj.grupos||[]).forEach(grupo=>{
+      const prods=getProdutosDoGrupo(grupo,proj._id);
+      prods.forEach(prod=>{
+        const etapas=getEtapas(prod.key);
+        etapas.forEach((e,i)=>{
+          if(ETAPAS[i].tipo!=='producao')return;
+          if(e.assignedTo===currentUser.id&&e.state!=='done')
+            tasks.push({proj,grupo,prod,etapaIdx:i,etapaState:e});
+        });
+      });
+    });
+  });
+  return tasks;
+}
+function renderMinhasTarefas(){
+  const el=$('p1-stats');if(el)el.style.display='none';
+  const fb=$('p1-filter-bar');if(fb)fb.style.display='none';
+  const st=$('p1-section-title');if(st)st.textContent='Minhas Tarefas';
+  const sub=$('p1-sub');
+  const tasks=getMinhasTarefas();
+  if(sub)sub.textContent=tasks.length+' tarefa'+(tasks.length!==1?'s':'')+' atribuída'+(tasks.length!==1?'s':'')+' a você';
+  const body=$('p1-body');
+  if(!tasks.length){body.innerHTML='<div class="empty-state">Nenhuma tarefa atribuída a você no momento</div>';return;}
+  body.innerHTML=tasks.map(t=>{
+    const cfg=ETAPAS[t.etapaIdx];const s=t.etapaState.state;
+    const stateLbl=s==='active'?'Em andamento':s==='paused'?'Pausada':'Aguardando início';
+    const stateCls=s==='active'?'b-green':s==='paused'?'b-amber':'b-gray';
+    const c=t.proj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—';
+    return`<div class="proj-card" onclick="goToEtapa('${t.proj._id}','${t.grupo._id}','${t.prod.key}',${t.etapaIdx})" style="flex-direction:column;align-items:flex-start;gap:8px;min-height:auto;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${cfg.cor}"></div>
+        <div style="font-size:13px;font-weight:600;color:var(--tx);flex:1">${cfg.nome}</div>
+        <span class="badge ${stateCls}">${stateLbl}</span>
+        <div class="arrow-btn">›</div>
+      </div>
+      <div style="font-size:12px;color:var(--tx2);padding-left:20px">${t.prod.nome} · ${t.grupo.nome} · <strong>#${t.proj.numeroProposta}</strong> ${c}</div>
+    </div>`;
+  }).join('');
+}
+function goToEtapa(projId,grupoId,key,etapaIdx){
+  curProj=allData.find(p=>p._id===projId);if(!curProj)return;
+  curGrupo=(curProj.grupos||[]).find(g=>g._id===grupoId);if(!curGrupo)return;
+  const prods=getProdutosDoGrupo(curGrupo,projId);
+  curProd=prods.find(p=>p.key===key);if(!curProd)return;
+  curKey=key;openEtapa(etapaIdx);
+}
+
+// ── Validações Pendentes (gestor) ──
+function getValidacoesPendentes(){
+  const pendentes=[];
+  allData.forEach(proj=>{
+    (proj.grupos||[]).forEach(grupo=>{
+      const prods=getProdutosDoGrupo(grupo,proj._id);
+      prods.forEach(prod=>{
+        const etapas=getEtapas(prod.key);
+        etapas.forEach((e,i)=>{
+          if(ETAPAS[i].tipo!=='gestor'||e.state==='done')return;
+          if(i>0&&etapas[i-1]?.state==='done')
+            pendentes.push({proj,grupo,prod,etapaIdx:i,gestorState:e,prevOpId:etapas[i-1]?.assignedTo,cfg:ETAPAS[i]});
+        });
+      });
+    });
+  });
+  return pendentes;
+}
+
+let _expandedProjId=null;
+let _searchQuery='';
+function togglePedido(projId){_expandedProjId=(_expandedProjId===projId)?null:projId;renderP1();}
+function searchP1(val){_searchQuery=(val||'').toLowerCase().trim();_expandedProjId=null;renderP1();}
+function gestorAbrirProduto(projId,grupoId,prodKey){
+  curProj=allData.find(p=>p._id===projId);if(!curProj)return;
+  curGrupo=(curProj.grupos||[]).find(g=>g._id===grupoId);if(!curGrupo)return;
+  const prods=getProdutosDoGrupo(curGrupo,projId);
+  curProd=prods.find(p=>p.key===prodKey);if(!curProd)return;
+  curKey=prodKey;curEtapaIdx=null;_p5Raf=null;
+  openProd(curProd);
+}
+
 // ── P1 render ──
 function renderP1(){
-  const rf=$('f-resp')?.value||'';const sf=$('f-status')?.value||'';
-  const q=($('tb-search-inp')?.value||'').toLowerCase();
-  let data=allData.filter(p=>{
-    const r=p.camposFormulario?.vendedorResponsavel||'';
-    if(rf&&r!==rf)return false;
-    if(sf&&p.statusOrcamento!==sf)return false;
-    if(q){const c=(p.camposFormulario?.clientes?.[0]?.nome_razao_social||'').toLowerCase();if(!c.includes(q)&&!p.numeroProposta.includes(q))return false}
-    return true;
+  if(currentUser?.role==='operador'){renderMinhasTarefas();return;}
+  // Gestor — simple proposal list (click to open detail)
+  const el=$('p1-stats');if(el)el.style.display='none';
+  const fb=$('p1-filter-bar');if(fb)fb.style.display='none';
+  const st=$('p1-section-title');if(st)st.textContent='Pedidos em Produção';
+  const sub=$('p1-sub');if(sub)sub.textContent='';
+
+  const temPedido=p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim());
+  const opOpts=USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('');
+  const prodStagesTotal=ETAPAS.filter(e=>e.tipo==='producao').length;
+
+  // Build one summary object per proposal
+  const projs=allData.filter(temPedido).map(proj=>{
+    let valPend=0,emAnd=0,totProds=0,prodsDone=0;
+    (proj.grupos||[]).forEach(grupo=>{
+      getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
+        totProds++;
+        const etapas=getEtapas(prod.key);
+        if(derivedState(prod.key)==='done')prodsDone++;
+        etapas.forEach((e,i)=>{
+          if(ETAPAS[i].tipo==='gestor'&&e.state!=='done'&&i>0&&etapas[i-1]?.state==='done')valPend++;
+          if(ETAPAS[i].tipo==='producao'&&(e.state==='active'||e.state==='paused'))emAnd++;
+        });
+      });
+    });
+    const pedNum=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'';
+    const cliente=proj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—';
+    const cidade=proj.camposFormulario?.clientes?.[0]?.cidade||proj.camposFormulario?.clientes?.[0]?.municipio||'';
+    const concluido=totProds>0&&prodsDone===totProds;
+    const prioridade=valPend>0?0:emAnd>0?1:concluido?3:2;
+    return{proj,pedNum,cliente,cidade,valPend,emAnd,totProds,prodsDone,concluido,prioridade};
   });
-  const grouped={};
-  data.forEach(p=>{const r=p.camposFormulario?.vendedorResponsavel||'Sem responsável';if(!grouped[r])grouped[r]=[];grouped[r].push(p)});
-  const body=$('p1-body');
-  if(!data.length){body.innerHTML='<div class="empty-state">Nenhum projeto encontrado</div>';return}
-  let html='';
-  Object.entries(grouped).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([resp,projs])=>{
-    const sid=btoa(unescape(encodeURIComponent(resp))).replace(/[^a-zA-Z0-9]/g,'');
-    html+=`<div class="resp-block">
-      <div class="resp-hdr" onclick="toggleResp('${sid}')">
-        <div class="resp-av">${initials(resp)}</div>
-        <span class="resp-name">${resp}</span>
-        <span class="resp-pill">${projs.length} projeto${projs.length!==1?'s':''}</span>
-        <span class="resp-chev open" id="rc-${sid}">▼</span>
-      </div>
-      <div class="cards-grid" id="rs-${sid}">
-        ${projs.map(p=>{
-          const cf=p.camposFormulario||{};const c=cf.clientes?.[0]?.nome_razao_social||'—';
-          const local=[cf.bairro,cf.cidade].filter(Boolean).join(', ');const gs=p.grupos?.length||0;
-          return`<div class="proj-card" onclick='openProj(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
-            <span class="proj-num">#${p.numeroProposta}</span>
-            <div class="proj-main"><div class="proj-name">${c}</div>${local?`<div class="proj-loc">${local}</div>`:''}</div>
-            <span class="badge ${bCls(p.statusOrcamento)}">${bTxt(p.statusOrcamento)}</span>
-            <span class="proj-meta">${gs} grupo${gs!==1?'s':''}</span>
-            <div class="arrow-btn">›</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+
+  projs.sort((a,b)=>a.prioridade-b.prioridade||b.valPend-a.valPend||b.emAnd-a.emAnd);
+
+  // ── Filtro de busca ──
+  const q=_searchQuery;
+  const filtered=q?projs.filter(p=>
+    p.pedNum.toLowerCase().includes(q)||
+    p.cliente.toLowerCase().includes(q)||
+    p.cidade.toLowerCase().includes(q)
+  ):projs;
+
+  // Barra de busca (sempre renderizada no topo)
+  const searchBar=`<div style="margin-bottom:14px;position:relative">
+    <div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:15px;pointer-events:none">🔍</div>
+    <input id="p1-search" type="text" value="${q.replace(/"/g,'&quot;')}"
+      placeholder="Buscar por pedido, cliente ou cidade…"
+      oninput="searchP1(this.value)"
+      style="width:100%;box-sizing:border-box;padding:11px 14px 11px 38px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);color:var(--tx);outline:none;transition:border-color .15s;box-shadow:var(--shadow)"
+      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'">
+    ${q?`<button onclick="searchP1('')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:4px">✕</button>`:''}
+  </div>`;
+
+  if(!filtered.length){
+    $('p1-body').innerHTML=searchBar+(q
+      ?`<div class="empty-state">Nenhum resultado para "<b>${q}</b>"</div>`
+      :`<div class="empty-state">Nenhum pedido em produção ainda<br><span style="font-size:12px;color:var(--tx3)">Os dados estão carregando…</span></div>`
+    );
+    if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+    return;
+  }
+
+  const accentFor=p=>{
+    if(p.valPend>0)return'#7c3aed';
+    if(p.concluido)return'#16a34a';
+    if(p.emAnd>0)return'var(--accent)';
+    return'var(--bd2)';
+  };
+  const badgeFor=p=>{
+    if(p.valPend>0)return`<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;white-space:nowrap">⚑ ${p.valPend} validaç${p.valPend!==1?'ões':'ão'}</span>`;
+    if(p.concluido)return`<span class="badge b-green" style="white-space:nowrap">✓ Concluído</span>`;
+    if(p.emAnd>0)return`<span class="badge b-blue" style="white-space:nowrap">${p.emAnd} em andamento</span>`;
+    return`<span class="badge b-gray" style="white-space:nowrap">Não iniciado</span>`;
+  };
+
+  const cards=filtered.map((p,pi)=>{
+    const pct=p.totProds>0?Math.round(p.prodsDone/p.totProds*100):0;
+    const accent=accentFor(p);
+    const isOpen=_expandedProjId===p.proj._id;
+
+    // ── Accordion product rows ──
+    let rows='';
+    if(isOpen){
+      let ri=0;
+      (p.proj.grupos||[]).forEach(grupo=>{
+        getProdutosDoGrupo(grupo,p.proj._id).forEach(prod=>{
+          const etapas=getEtapas(prod.key);
+          const state=derivedState(prod.key);
+          const psd=etapas.filter((e,i)=>ETAPAS[i].tipo==='producao'&&e.state==='done').length;
+          const ppct=Math.round(psd/prodStagesTotal*100);
+          const sid='s_'+pi+'_'+(ri++);
+
+          // find pending gestor validation
+          let valIdx=-1;
+          etapas.forEach((e,i)=>{if(valIdx<0&&ETAPAS[i].tipo==='gestor'&&e.state!=='done'&&i>0&&etapas[i-1]?.state==='done')valIdx=i;});
+          // find active production stage
+          const actIdx=etapas.findIndex((e,i)=>ETAPAS[i].tipo==='producao'&&(e.state==='active'||e.state==='paused'));
+
+          let badge='',info='',action='',ra='var(--bd2)',rb='var(--bg)';
+
+          if(state==='done'){
+            badge='<span class="badge b-green" style="font-size:10px">✓ Pronto</span>';
+            info='Todas as '+prodStagesTotal+' etapas concluídas';
+            ra='#16a34a';rb='#f0fdf4';
+          } else if(valIdx>=0){
+            const prevOp=etapas[valIdx-1]?.assignedTo?USUARIOS.find(u=>u.id===etapas[valIdx-1].assignedTo):null;
+            badge='<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700">⚑ Validar</span>';
+            info=(ETAPAS[valIdx].gestorFor||ETAPAS[valIdx].nome)+(prevOp?' · concluído por '+prevOp.nome.split(' ')[0]:'');
+            ra='#7c3aed';rb='#faf5ff';
+            action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
+              +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Atribuir próxima etapa a…</option>'+opOpts+'</select>'
+              +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorValidarInline(\''+prod.key+'\','+valIdx+',\''+sid+'\')">✓ Validar</button>'
+              +'</div>';
+          } else if(actIdx>=0){
+            const op=etapas[actIdx].assignedTo?USUARIOS.find(u=>u.id===etapas[actIdx].assignedTo):null;
+            const el2=etapaElapsed(prod.key,actIdx);
+            const paused=etapas[actIdx].state==='paused';
+            badge='<span class="badge '+(paused?'b-amber':'b-blue')+'" style="font-size:10px">'+(paused?'Pausada':'Em andamento')+'</span>';
+            info=ETAPAS[actIdx].nome+(op?' · '+op.nome.split(' ')[0]:'')+(el2>0?' · '+fmtTime(el2):'');
+            ra='var(--accent)';
+          } else {
+            const e0=etapas[0];
+            if(e0.assignedTo){
+              const op=USUARIOS.find(u=>u.id===e0.assignedTo);
+              badge='<span class="badge b-gray" style="font-size:10px">Demandado</span>';
+              info=ETAPAS[0].nome+' → '+(op?.nome.split(' ')[0]||e0.assignedTo);
+            } else {
+              badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
+              action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
+                +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Atribuir a…</option>'+opOpts+'</select>'
+                +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorDemandarInline(\''+prod.key+'\',\''+sid+'\')">→ Demandar</button>'
+                +'</div>';
+            }
+          }
+
+          rows+='<div style="border-top:1px solid var(--bd);padding:10px 14px;display:flex;align-items:flex-start;gap:10px;background:'+rb+';border-left:3px solid '+ra+'">'
+            +'<div style="flex:1;min-width:0">'
+            +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+            +'<span style="font-size:12px;font-weight:600;color:var(--tx)">'+prod.nome+'</span>'
+            +badge
+            +'</div>'
+            +(info?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">'+info+'</div>':'')
+            +action
+            +'</div>'
+            +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
+            +'<div style="display:flex;align-items:center;gap:4px">'
+            +'<div style="width:52px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden">'
+            +'<div style="width:'+ppct+'%;height:100%;background:'+ra+';border-radius:2px"></div>'
+            +'</div>'
+            +'<span style="font-size:9px;color:var(--tx3)">'+psd+'/'+prodStagesTotal+'</span>'
+            +'</div>'
+            +'<button class="cbtn" style="font-size:10px;padding:3px 8px;color:var(--tx2);border-color:var(--bd)" '
+            +'onclick="gestorAbrirProduto(\''+p.proj._id+'\',\''+grupo._id+'\',\''+prod.key+'\')">Detalhes ›</button>'
+            +'</div>'
+            +'</div>';
+        });
+      });
+    }
+
+    return'<div style="border-radius:12px;overflow:hidden;border:1px solid '+(isOpen?accent:'var(--bd)')+';box-shadow:var(--shadow)">'
+      +'<div style="display:flex;align-items:stretch;cursor:pointer;background:var(--bg2)" onclick="togglePedido(\''+p.proj._id+'\')">'
+      +'<div style="width:5px;background:'+accent+';flex-shrink:0"></div>'
+      +'<div style="flex:1;padding:14px 16px;display:flex;align-items:center;gap:16px;min-width:0">'
+      +'<div style="flex-shrink:0;text-align:center;min-width:68px">'
+      +'<div style="font-size:17px;font-weight:800;color:'+accent+';line-height:1;font-family:\'JetBrains Mono\',monospace;letter-spacing:-.5px">'+p.pedNum+'</div>'
+      +'<div style="font-size:9px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em">Pedido</div>'
+      +'</div>'
+      +'<div style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:14px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.cliente+'</div>'
+      +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+p.cidade+'</div>':'')
+      +'</div>'
+      +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
+      +badgeFor(p)
+      +(p.totProds>0?'<div style="display:flex;align-items:center;gap:6px">'
+        +'<div style="width:80px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden">'
+        +'<div style="width:'+pct+'%;height:100%;background:'+accent+';border-radius:2px"></div>'
+        +'</div>'
+        +'<div style="font-size:10px;color:var(--tx3);white-space:nowrap">'+p.prodsDone+'/'+p.totProds+'</div>'
+        +'</div>':'')
+      +'</div>'
+      +'<div style="flex-shrink:0;color:var(--tx3);font-size:13px;width:18px;text-align:center">'+(isOpen?'▲':'▼')+'</div>'
+      +'</div>'
+      +'</div>'
+      +rows
+      +'</div>';
   });
-  body.innerHTML=html;
+
+  const countNote=q&&filtered.length<projs.length
+    ?`<div style="font-size:11px;color:var(--tx3);margin-bottom:10px;padding-left:2px">${filtered.length} de ${projs.length} pedidos</div>`
+    :'';
+  $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>';
+  // Mantém foco e cursor no campo de busca após re-render
+  if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+}
+function gestorValidarInline(key,etapaIdx,selId){
+  const opId=$(selId)?.value;
+  if(!opId){toast('Selecione um operador para atribuir');return;}
+  const e=getEtapas(key)[etapaIdx];
+  e.state='done';e.endAt=Date.now();
+  const nextE=getEtapas(key)[etapaIdx+1];if(nextE)nextE.assignedTo=opId;
+  if(!pState[key])pState[key]={state:'idle'};pState[key].state=derivedState(key);
+  const op=USUARIOS.find(u=>u.id===opId);
+  const nextCfg=ETAPAS[etapaIdx+1];
+  saveProducaoState(key, 0);
+  toast('Validado ✓ — '+(nextCfg?.nome||'produto concluído')+' atribuído a '+(op?.nome.split(' ')[0]||opId));
+  renderP1();
+}
+function gestorDemandarInline(key,selId){
+  const opId=$(selId)?.value;
+  if(!opId){toast('Selecione um operador para demandar');return;}
+  const etapas=getEtapas(key);const now=Date.now();
+  // Etapa 0: "Supervisor de Produção" — o próprio ato de demandar É a supervisão; marca concluído
+  etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
+  etapas[0].firstStartAt=now;etapas[0].startAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
+  // Etapa 1: validação gestor da supervisão — auto-concluída junto com o ato de demandar
+  etapas[1].state='done';etapas[1].endAt=now;
+  // Etapa 2: próxima etapa de produção ("Desenho") → atribuída ao operador escolhido
+  if(etapas[2])etapas[2].assignedTo=opId;
+  if(!pState[key])pState[key]={state:'idle'};pState[key].state=derivedState(key);
+  const op=USUARIOS.find(u=>u.id===opId);
+  const nextNome=ETAPAS[2]?.nome||'próxima etapa';
+  saveProducaoState(key, 0);
+  toast('Demandado ✓ — '+nextNome+' atribuído a '+(op?.nome.split(' ')[0]||opId));
+  renderP1();
+}
+function saveObs(){
+  const obs=$('p5-obs');
+  if(!obs||curKey===null||curEtapaIdx===null)return;
+  localStorage.setItem('obs_'+curKey+'_'+curEtapaIdx,obs.value);
+  saveProducaoState(curKey, 1200); // debounce 1.2s — não salva a cada tecla
 }
 function toggleResp(sid){
   const s=$('rs-'+sid),c=$('rc-'+sid);if(!s)return;
@@ -758,29 +1420,105 @@ function toggleResp(sid){
 }
 
 // ── API ──
-async function loadPage(pg){const r=await fetch(`${API}?page=${pg}&limit=30`);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
-async function init(){
+let _totalPropostas=0,_totalPags=1,_renderTimer=null;
+
+function _refreshStats(){
+  $('st-total').textContent=_totalPropostas||allData.length;
+  $('sb-total').textContent=allData.length;
+  $('st-init').textContent=allData.filter(p=>p.statusOrcamento?.includes('Iniciado')).length;
+  $('st-aprov').textContent=allData.filter(p=>p.statusOrcamento?.includes('Aprovado')).length;
+  $('st-resps').textContent=new Set(allData.map(p=>p.camposFormulario?.vendedorResponsavel||'')).size;
+  const loaded=allData.length,total=_totalPropostas||loaded;
+  $('st-pag').textContent=loaded<total?`${loaded} de ${total} carregando…`:`${loaded} projetos`;
+}
+function _deferRender(){
+  // Throttle renderP1 during background loading — no more than 1x per 800ms
+  clearTimeout(_renderTimer);
+  _renderTimer=setTimeout(()=>{if(currentUser)renderP1();},800);
+}
+
+async function fetchPagina(pg,limit=100){
+  const r=await fetch(`${API}?page=${pg}&limit=${limit}`);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+// ── Persistência no backend MongoDB ──────────────────────────
+function saveProducaoState(key, delay=400){
+  if(!key)return;
+  clearTimeout(_saveTimer[key]);
+  _saveTimer[key]=setTimeout(async()=>{
+    const etapas=pEtapas[key]||[];
+    // Coleta observações deste key do localStorage
+    const obs=[];
+    for(let i=0;i<ETAPAS.length;i++){
+      const txt=localStorage.getItem('obs_'+key+'_'+i);
+      if(txt)obs.push({idx:i,text:txt});
+    }
+    try{
+      await fetch(PROD_API+'/api/producao/'+encodeURIComponent(key),{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({etapas,obs})
+      });
+    }catch(e){console.warn('[producao] falha ao salvar (backend offline?):', key);}
+  }, delay);
+}
+
+async function loadProducaoStates(){
   try{
-    const j=await loadPage(curPage);allData=j.propostas||[];totPages=j.totalPaginas||1;
-    const total=j.total||0;
-    $('st-total').textContent=total;$('st-pag').textContent=`Página ${curPage} de ${totPages}`;
-    $('p1-sub').textContent=`${allData.length} projetos nesta página`;$('sb-total').textContent=total;
-    $('st-init').textContent=allData.filter(p=>p.statusOrcamento?.includes('Iniciado')).length;
-    $('st-aprov').textContent=allData.filter(p=>p.statusOrcamento?.includes('Aprovado')).length;
+    const r=await fetch(PROD_API+'/api/producao');
+    if(!r.ok)return;
+    const docs=await r.json();
+    docs.forEach(doc=>{
+      if(!doc.key||!Array.isArray(doc.etapas))return;
+      pEtapas[doc.key]=doc.etapas;
+      // Restaura observações no localStorage
+      (doc.obs||[]).forEach(o=>{
+        if(o.text)localStorage.setItem('obs_'+doc.key+'_'+o.idx, o.text);
+      });
+    });
+    // Recalcula pState para todas as chaves carregadas
+    Object.keys(pEtapas).forEach(k=>{
+      pState[k]={state:derivedState(k)};
+    });
+    console.log('[producao] estados carregados:',Object.keys(pEtapas).length,'produtos');
+  }catch(e){
+    console.warn('[producao] backend offline — usando estado local');
+  }
+}
+
+async function init(){
+  renderLogin();
+  try{
+    // Página 1 imediata — usuário vê dados em ~1s
+    const j=await fetchPagina(1,100);
+    allData=j.propostas||[];
+    _totalPropostas=j.total||allData.length;
+    _totalPags=j.totalPaginas||1;
+    // Popula filtro de responsáveis
     const resps=new Set(allData.map(p=>p.camposFormulario?.vendedorResponsavel||''));
-    $('st-resps').textContent=resps.size;
     const sel=$('f-resp');
     [...resps].filter(Boolean).sort().forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o)});
-    if(totPages>1){$('pag').style.display='flex';$('pag-info').textContent=`${curPage} / ${totPages}`;$('pag-prev').disabled=curPage<=1;$('pag-next').disabled=curPage>=totPages}
-    renderP1();
-  }catch(e){$('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro: ${e.message}</div>`}
-}
-async function changePage(dir){
-  curPage+=dir;$('p1-body').innerHTML='<div class="loading-state"><div class="spin"></div><br>Carregando…</div>';
-  const j=await loadPage(curPage);allData=j.propostas||[];totPages=j.totalPaginas||1;
-  $('p1-sub').textContent=`${allData.length} projetos nesta página`;
-  $('pag-info').textContent=`${curPage} / ${totPages}`;$('pag-prev').disabled=curPage<=1;$('pag-next').disabled=curPage>=totPages;
-  renderP1();
+    _refreshStats();
+    // Carrega estados de produção do backend (não bloqueia se offline)
+    await loadProducaoStates();
+    if(currentUser)renderP1();
+
+    // Restante em background — atualiza painel a cada página nova
+    for(let p=2;p<=_totalPags;p++){
+      try{
+        const jj=await fetchPagina(p,100);
+        allData=allData.concat(jj.propostas||[]);
+        _refreshStats();
+        _deferRender();
+      }catch(_){break;}
+    }
+    // Garante render final com dados completos
+    if(currentUser)renderP1();
+  }catch(e){
+    $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+  }
 }
 init();
 </script>
