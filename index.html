@@ -333,27 +333,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     <div><div class="sb-logo-text">Ulhoa</div><div class="sb-logo-sub">Metais</div></div>
   </div>
   <div class="sb-section">Menu</div>
-  <div class="sb-item active" onclick="navTo('p1')">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z"/></svg>
-    Dashboard
-  </div>
-  <div class="sb-item" onclick="navTo('p1')">
+  <div class="sb-item active" id="sb-pedidos" onclick="navTo('p1')">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3a1 1 0 011-1h12a1 1 0 110 2H2a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H2a1 1 0 01-1-1zm1 4a1 1 0 000 2h8a1 1 0 000-2H2z"/></svg>
-    Projetos
+    Pedidos
     <span class="sb-pill" id="sb-total">—</span>
   </div>
   <div class="sb-item" id="sb-dash" onclick="navToDash()">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 11h3v3H1v-3zm4-4h3v7H5V7zm4-4h3v11H9V3zm4-2h2v13h-2V1z"/></svg>
     Dashboard
-  </div>
-  <div class="sb-item">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zm-5 5a5 5 0 1110 0H3z"/></svg>
-    Equipe
-  </div>
-  <div class="sb-section">Geral</div>
-  <div class="sb-item">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M7.5 1a6.5 6.5 0 100 13A6.5 6.5 0 007.5 1zm.75 3.5a.75.75 0 10-1.5 0V8l2.5 2.5a.75.75 0 001.06-1.06L8.25 7.19V4.5z" opacity=".7"/></svg>
-    Configurações
   </div>
   <div class="sb-bottom">
     <div class="sb-item" onclick="logout()" style="color:rgba(255,255,255,.35);font-size:12px;margin-bottom:4px">
@@ -369,17 +356,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 
 <div class="main">
   <div class="topbar">
-    <div><div class="tb-title" id="tb-title">Dashboard</div></div>
-    <div class="tb-sep"></div>
-    <div class="tb-search">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1a5.5 5.5 0 014.383 8.823l3.146 3.147a.75.75 0 01-1.06 1.06l-3.147-3.146A5.5 5.5 0 116.5 1zm0 1.5a4 4 0 100 8 4 4 0 000-8z"/></svg>
-      <input id="tb-search-inp" type="text" placeholder="Buscar projeto…" oninput="renderP1()">
-    </div>
-    <div class="tb-notif">
-      <svg viewBox="0 0 16 16" fill="currentColor" style="width:15px;height:15px;color:var(--tx2)"><path d="M8 1a5 5 0 00-5 5v2.586l-1.293 1.293A1 1 0 002 11.586V12a1 1 0 001 1h10a1 1 0 001-1v-.414a1 1 0 00-.293-.707L12 8.586V6a5 5 0 00-5-5zm0 13a2 2 0 002-2H6a2 2 0 002 2z"/></svg>
-      <div class="tb-notif-dot"></div>
-    </div>
-    <div class="tb-avatar">OP</div>
+    <div class="tb-title" id="tb-title">Pedidos</div>
   </div>
 
   <div class="breadbar" id="breadbar">
@@ -935,11 +912,13 @@ function setBread(items){
   }).join('');
 }
 function setTitle(t){$('tb-title').textContent=t}
+function setSbActive(id){document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));const el=$(id);if(el)el.classList.add('active');}
 function navTo(pg){
   if(pg==='p1'){
     curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
     if(currentUser?.role==='operador'){navToMinhasTarefas();return;}
-    setBread([{label:'Projetos',active:true}]);setTitle('Dashboard');renderP1();showPage('p1');
+    setSbActive('sb-pedidos');
+    setBread([{label:'Pedidos',active:true}]);setTitle('Pedidos em Produção');renderP1();showPage('p1');
   }
   else if(pg==='p2'&&curProj)openProj(curProj);
   else if(pg==='p3'&&curGrupo)openGrupo(curGrupo._id);
@@ -1104,6 +1083,7 @@ function logout(){
 // ── Minhas Tarefas (operador) ──
 function navToMinhasTarefas(){
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  setSbActive('sb-pedidos');
   setBread([{label:'Minhas Tarefas',active:true}]);setTitle('Minhas Tarefas');
   renderMinhasTarefas();showPage('p1');
 }
@@ -1458,6 +1438,7 @@ async function fetchPagina(pg,limit=100){
 // ── Dashboard analítico ──────────────────────────────────────
 function navToDash(){
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  setSbActive('sb-dash');
   setBread([{label:'Dashboard',active:true}]);setTitle('Dashboard Analítico');
   renderDash();showPage('p6');
 }
