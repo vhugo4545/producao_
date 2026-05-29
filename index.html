@@ -586,6 +586,9 @@ function fmtTime(s){s=Math.max(0,Math.round(s||0));const h=Math.floor(s/3600),m=
 function pad(n){return String(n).padStart(2,'0')}
 function fmtTs(ms){if(!ms)return'—';return new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function fmtDate(ms){if(!ms)return'';return new Date(ms).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})}
+/* ── Helpers de segurança ── */
+function esc(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function escJs(s){if(s===null||s===undefined)return'';return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\x27");}
 function initials(n){return n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()}
 function grupoIco(n){n=(n||'').toLowerCase();if(n.includes('vidro'))return'🪟';if(n.includes('instala'))return'🔧';if(n.includes('corrimão')||n.includes('corrimao'))return'🪜';if(n.includes('guarda')||n.includes('montante'))return'🛡️';if(n.includes('perfil'))return'📐';return'⚙️'}
 function prodIco(n){n=(n||'').toLowerCase();if(n.includes('vidro'))return'🪟';if(n.includes('tubo'))return'🔩';if(n.includes('haste'))return'📏';if(n.includes('flange'))return'⭕';if(n.includes('silicone'))return'🧪';if(n.includes('pintura'))return'🎨';if(n.includes('mão de obra'))return'👷';if(n.includes('chumbador'))return'⚙️';if(n.includes('perfil'))return'📐';if(n.includes('barra'))return'➖';if(n.includes('disco'))return'💿';return'🔧'}
@@ -872,13 +875,13 @@ function openEtapa(idx){
   </div>`;
   const pedNum=curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta;
   $('p5-prod-body').innerHTML=`<div class="ic-row">
-    <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${curProd.nome}</div></div>
+    <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(curProd.nome)}</div></div>
     <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${curGrupo.nome}</div></div>
+    <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
     <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${pedNum}</div></div>
+    <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(pedNum)}</div></div>
     <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Cliente</div><div class="ic-value" style="font-size:13px">${curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—'}</div></div>
+    <div class="ic-field"><div class="ic-label">Cliente</div><div class="ic-value" style="font-size:13px">${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
   </div>`;
   // Load saved observation
   const obsEl=$('p5-obs');if(obsEl)obsEl.value=localStorage.getItem('obs_'+k+'_'+idx)||'';
@@ -999,19 +1002,21 @@ function openGrupo(grupoId){
     </div>
     <div class="ph-track"><div class="ph-fill" id="ph-fill" style="width:${pct}%"></div></div>`;
   $('p3-sub').textContent=`${prods.length} produto${prods.length!==1?'s':`s`} · clique para iniciar produção`;
+  _p3ProdCache={};
   $('p3-body').innerHTML=prods.map(prod=>{
     const k=prod.key;
+    _p3ProdCache[k]=prod;
     const state=derivedState(k);
     const doneCount=getEtapas(k).filter(x=>x.state==='done').length;
     const insCnt=prod.insumos?.length||0;
-    return`<div class="prod-card${state==='running'?' st-running':state==='done'?' st-done':state==='paused'?' st-paused':''}" id="pr-${k}" onclick="openProd(${JSON.stringify(prod).replace(/"/g,'&quot;')})">
+    return`<div class="prod-card${state==='running'?' st-running':state==='done'?' st-done':state==='paused'?' st-paused':''}" id="pr-${esc(k)}" onclick="openProdByKey('${escJs(k)}')">
       <div class="prod-ico">${prodIco(prod.nome)}</div>
       <div class="grupo-info">
-        <div class="grupo-nome">${prod.nome}</div>
+        <div class="grupo-nome">${esc(prod.nome)}</div>
         <div class="grupo-amb">${insCnt} insumo${insCnt!==1?'s':''}</div>
       </div>
-      <div class="dot ${state}" id="dot-${k}"></div>
-      <div class="sm-timer ${state==='idle'?'':state}" id="sm-${k}">${state==='idle'?'':doneCount+'/'+ETAPAS.length}</div>
+      <div class="dot ${state}" id="dot-${esc(k)}"></div>
+      <div class="sm-timer ${state==='idle'?'':state}" id="sm-${esc(k)}">${state==='idle'?'':doneCount+'/'+ETAPAS.length}</div>
       <div class="arrow-btn">›</div>
     </div>`;
   }).join('')||'<div class="empty-state">Nenhum produto</div>';
@@ -1019,19 +1024,20 @@ function openGrupo(grupoId){
   setTitle(grupo.nome);showPage('p3');
 }
 
+function openProdByKey(k){const p=_p3ProdCache[k];if(p)openProd(p);}
 function openProd(prod){
   if(!curProj||!curGrupo)return;
   curProd=prod;curKey=prod.key;
   if(!pState[curKey])pState[curKey]={state:'idle'};
   $('p4-info-body').innerHTML=`
     <div class="ic-row">
-      <div class="ic-field"><div class="ic-label">Nome</div><div class="ic-value">${prod.nome}</div></div>
+      <div class="ic-field"><div class="ic-label">Nome</div><div class="ic-value">${esc(prod.nome)}</div></div>
       <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${curGrupo.nome}</div></div>
+      <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
       <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${curGrupo.ambiente||'—'}</div></div>
+      <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.ambiente||'—')}</div></div>
       <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Projeto</div><div class="ic-value" style="font-size:13px">#${curProj.numeroProposta} — ${curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—'}</div></div>
+      <div class="ic-field"><div class="ic-label">Projeto</div><div class="ic-value" style="font-size:13px">#${esc(curProj.numeroProposta)} — ${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
     </div>`;
   const insumos=prod.insumos||[];
   $('insumos-count').textContent=insumos.length+' insumo'+(insumos.length!==1?'s':'');
@@ -1172,6 +1178,7 @@ function getValidacoesPendentes(){
 
 let _expandedProjId=null;
 let _searchQuery='';
+let _p3ProdCache={}; // key→prod, para onclick seguro em P3
 function togglePedido(projId){_expandedProjId=(_expandedProjId===projId)?null:projId;renderP1();}
 function searchP1(val){_searchQuery=(val||'').toLowerCase().trim();_expandedProjId=null;renderP1();}
 function gestorAbrirProduto(projId,grupoId,prodKey){
@@ -1241,7 +1248,7 @@ function renderP1(){
 
   if(!filtered.length){
     $('p1-body').innerHTML=searchBar+(q
-      ?`<div class="empty-state">Nenhum resultado para "<b>${q}</b>"</div>`
+      ?`<div class="empty-state">Nenhum resultado para "<b>${esc(q)}</b>"</div>`
       :`<div class="empty-state">Nenhum pedido em produção ainda<br><span style="font-size:12px;color:var(--tx3)">Os dados estão carregando…</span></div>`
     );
     if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
@@ -1297,7 +1304,7 @@ function renderP1(){
             ra='#7c3aed';rb='#faf5ff';
             action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
               +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Atribuir próxima etapa a…</option>'+opOpts+'</select>'
-              +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorValidarInline(\''+prod.key+'\','+valIdx+',\''+sid+'\')">✓ Validar</button>'
+              +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorValidarInline(\''+escJs(prod.key)+'\','+valIdx+',\''+sid+'\')">✓ Validar</button>'
               +'</div>';
           } else if(actIdx>=0){
             const op=etapas[actIdx].assignedTo?USUARIOS.find(u=>u.id===etapas[actIdx].assignedTo):null;
@@ -1316,7 +1323,7 @@ function renderP1(){
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
               action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
                 +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Atribuir a…</option>'+opOpts+'</select>'
-                +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorDemandarInline(\''+prod.key+'\',\''+sid+'\')">→ Demandar</button>'
+                +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorDemandarInline(\''+escJs(prod.key)+'\',\''+sid+'\')">→ Demandar</button>'
                 +'</div>';
             }
           }
@@ -1324,10 +1331,10 @@ function renderP1(){
           rows+='<div style="border-top:1px solid var(--bd);padding:10px 14px;display:flex;align-items:flex-start;gap:10px;background:'+rb+';border-left:3px solid '+ra+'">'
             +'<div style="flex:1;min-width:0">'
             +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-            +'<span style="font-size:12px;font-weight:600;color:var(--tx)">'+prod.nome+'</span>'
+            +'<span style="font-size:12px;font-weight:600;color:var(--tx)">'+esc(prod.nome)+'</span>'
             +badge
             +'</div>'
-            +(info?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">'+info+'</div>':'')
+            +(info?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">'+esc(info)+'</div>':'')
             +action
             +'</div>'
             +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
@@ -1338,7 +1345,7 @@ function renderP1(){
             +'<span style="font-size:9px;color:var(--tx3)">'+psd+'/'+prodStagesTotal+'</span>'
             +'</div>'
             +'<button class="cbtn" style="font-size:10px;padding:3px 8px;color:var(--tx2);border-color:var(--bd)" '
-            +'onclick="gestorAbrirProduto(\''+p.proj._id+'\',\''+grupo._id+'\',\''+prod.key+'\')">Detalhes ›</button>'
+            +'onclick="gestorAbrirProduto(\''+escJs(p.proj._id)+'\',\''+escJs(grupo._id)+'\',\''+escJs(prod.key)+'\')">Detalhes ›</button>'
             +'</div>'
             +'</div>';
         });
@@ -1350,13 +1357,13 @@ function renderP1(){
       +'<div style="width:5px;background:'+accent+';flex-shrink:0"></div>'
       +'<div style="flex:1;padding:14px 16px;display:flex;align-items:center;gap:16px;min-width:0">'
       +'<div style="flex-shrink:0;text-align:center;min-width:68px">'
-      +'<div style="font-size:17px;font-weight:800;color:'+accent+';line-height:1;font-family:\'JetBrains Mono\',monospace;letter-spacing:-.5px">'+p.pedNum+'</div>'
+      +'<div style="font-size:17px;font-weight:800;color:'+accent+';line-height:1;font-family:\'JetBrains Mono\',monospace;letter-spacing:-.5px">'+esc(p.pedNum)+'</div>'
       +'<div style="font-size:9px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em">Pedido</div>'
       +'</div>'
       +'<div style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
       +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:14px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.cliente+'</div>'
-      +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+p.cidade+'</div>':'')
+      +'<div style="font-size:14px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cliente)+'</div>'
+      +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+esc(p.cidade)+'</div>':'')
       +'</div>'
       +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
       +badgeFor(p)
@@ -1557,8 +1564,8 @@ function renderDash(){
             const ef=p.cal>0?Math.min(100,Math.round(p.hh/p.cal*100)):null;
             const pct=Math.round(p.hh/maxPedHH*100);
             return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
-              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${p.pedNum}</td>
-              <td style="padding:9px 14px;color:var(--tx);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente}</td>
+              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${esc(p.pedNum)}</td>
+              <td style="padding:9px 14px;color:var(--tx);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.cliente)}</td>
               <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--tx)">${fmtTime(p.hh)}</td>
               <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx2)">${p.cal>0?fmtTime(p.cal):'—'}</td>
               <td style="padding:9px 14px;text-align:right;font-weight:700;color:${ef===null?'var(--tx3)':ef>=80?'#16a34a':ef>=50?'#d97706':'#dc2626'}">${ef!==null?ef+'%':'—'}</td>
@@ -1655,8 +1662,8 @@ function renderDash(){
           ${byItem.slice(0,30).map((it,idx)=>{
             const ef=it.cal>0?Math.min(100,Math.round(it.hh/it.cal*100)):null;
             return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
-              <td style="padding:9px 14px;font-weight:600;color:var(--tx);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.prodNome}</td>
-              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">${it.pedNum}</td>
+              <td style="padding:9px 14px;font-weight:600;color:var(--tx);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.prodNome)}</td>
+              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">${esc(it.pedNum)}</td>
               <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#0891b2">${fmtTime(it.hh)}</td>
               <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${it.cal>0?fmtTime(it.cal):'—'}</td>
               <td style="padding:9px 14px;text-align:right;font-weight:700;color:${ef===null?'var(--tx3)':ef>=80?'#16a34a':ef>=50?'#d97706':'#dc2626'}">${ef!==null?ef+'%':'—'}</td>
