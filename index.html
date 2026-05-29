@@ -342,9 +342,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     Projetos
     <span class="sb-pill" id="sb-total">—</span>
   </div>
-  <div class="sb-item">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 4a.75.75 0 10-1.5 0v3.25l-1.5 1.5a.75.75 0 001.06 1.06l1.94-1.94V5z"/></svg>
-    Histórico
+  <div class="sb-item" id="sb-dash" onclick="navToDash()">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 11h3v3H1v-3zm4-4h3v7H5V7zm4-4h3v11H9V3zm4-2h2v13h-2V1z"/></svg>
+    Dashboard
   </div>
   <div class="sb-item">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zm-5 5a5 5 0 1110 0H3z"/></svg>
@@ -510,6 +510,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- P6: DASHBOARD ANALÍTICO -->
+    <div class="page" id="p6">
+      <div id="p6-body" style="padding-bottom:32px"></div>
     </div>
 
   </div>
@@ -1441,6 +1446,235 @@ async function fetchPagina(pg,limit=100){
   const r=await fetch(`${API}?page=${pg}&limit=${limit}`);
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
+}
+
+// ── Dashboard analítico ──────────────────────────────────────
+function navToDash(){
+  curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  setBread([{label:'Dashboard',active:true}]);setTitle('Dashboard Analítico');
+  renderDash();showPage('p6');
+}
+
+function renderDash(){
+  const temPedido=p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim());
+
+  // ── Coleta de dados ──
+  const byPedido=[];   // {pedNum,cliente,hh,cal}
+  const byEtapa={};   // {stageName:{times:[],hh:0,count:0}}
+  const byFunc={};    // {userId:{hh:0,count:0,stages:{}}}
+  const byItem=[];    // {prodNome,pedNum,cliente,hh,cal}
+
+  allData.filter(temPedido).forEach(proj=>{
+    const pedNum=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'';
+    const cliente=proj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—';
+    let pedHH=0,pedCalMin=Infinity,pedCalMax=0;
+
+    (proj.grupos||[]).forEach(grupo=>{
+      getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
+        const etapas=getEtapas(prod.key);
+        let itemHH=0,itemCalMin=Infinity,itemCalMax=0;
+
+        etapas.forEach((e,i)=>{
+          if(ETAPAS[i].tipo!=='producao')return;
+          const secs=e.baseElapsed||0;
+          const nome=ETAPAS[i].nome;
+
+          if(secs>0||e.state==='done'){
+            // por etapa
+            if(!byEtapa[nome])byEtapa[nome]={times:[],hh:0,count:0};
+            if(secs>0){byEtapa[nome].times.push(secs);byEtapa[nome].hh+=secs;byEtapa[nome].count++;}
+            // por funcionário
+            if(e.assignedTo&&secs>0){
+              if(!byFunc[e.assignedTo])byFunc[e.assignedTo]={hh:0,count:0,stages:{}};
+              byFunc[e.assignedTo].hh+=secs;byFunc[e.assignedTo].count++;
+              if(!byFunc[e.assignedTo].stages[nome])byFunc[e.assignedTo].stages[nome]=0;
+              byFunc[e.assignedTo].stages[nome]+=secs;
+            }
+            itemHH+=secs;pedHH+=secs;
+          }
+          if(e.firstStartAt){itemCalMin=Math.min(itemCalMin,e.firstStartAt);pedCalMin=Math.min(pedCalMin,e.firstStartAt);}
+          if(e.endAt){itemCalMax=Math.max(itemCalMax,e.endAt);pedCalMax=Math.max(pedCalMax,e.endAt);}
+        });
+
+        if(itemHH>0){
+          const cal=itemCalMin<Infinity&&itemCalMax>0?(itemCalMax-itemCalMin)/1000:0;
+          byItem.push({prodNome:prod.nome,pedNum,cliente,hh:itemHH,cal});
+        }
+      });
+    });
+
+    if(pedHH>0){
+      const cal=pedCalMin<Infinity&&pedCalMax>0?(pedCalMax-pedCalMin)/1000:0;
+      byPedido.push({pedNum,cliente,hh:pedHH,cal});
+    }
+  });
+
+  byPedido.sort((a,b)=>b.hh-a.hh);
+  byItem.sort((a,b)=>b.hh-a.hh);
+  const etapasSorted=Object.entries(byEtapa).filter(([,v])=>v.count>0)
+    .sort((a,b)=>b[1].hh/b[1].count-a[1].hh/a[1].count);
+  const funcSorted=Object.entries(byFunc).sort((a,b)=>b[1].hh-a[1].hh);
+
+  const totalHH=byPedido.reduce((s,p)=>s+p.hh,0);
+  const maxPedHH=byPedido[0]?.hh||1;
+  const maxEtapaAvg=etapasSorted[0]?etapasSorted[0][1].hh/etapasSorted[0][1].count:1;
+  const maxFuncHH=funcSorted[0]?funcSorted[0][1].hh:1;
+
+  const noData='<div class="empty-state" style="padding:24px 0;font-size:13px;color:var(--tx3)">Nenhum dado de tempo registrado ainda</div>';
+
+  // ── Render ──
+  let html='';
+
+  // ─ Resumo geral ─
+  html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:28px">
+    ${[
+      {label:'Horas efetivas totais',val:fmtTime(totalHH),sub:'soma de todos os itens',color:'var(--accent)'},
+      {label:'Pedidos rastreados',val:byPedido.length,sub:'com tempo registrado',color:'#7c3aed'},
+      {label:'Itens rastreados',val:byItem.length,sub:'produtos com tempo',color:'#0891b2'},
+      {label:'Funcionários ativos',val:funcSorted.length,sub:'com horas lançadas',color:'#d97706'},
+    ].map(c=>`<div class="stat-card" style="padding:16px 18px">
+      <div class="stat-label" style="font-size:11px">${c.label}</div>
+      <div class="stat-val" style="font-size:26px;font-weight:800;color:${c.color};margin:6px 0 2px">${c.val}</div>
+      <div class="stat-change">${c.sub}</div>
+    </div>`).join('')}
+  </div>`;
+
+  // ─ Por Pedido ─
+  html+=`<div class="info-card" style="margin-bottom:20px">
+    <div class="ic-head" style="font-size:13px">⏱ Tempo Efetivo por Pedido</div>
+    <div class="ic-body" style="padding:0">
+      ${byPedido.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--bg3)">
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Pedido</th>
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Cliente</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">HH efetivo</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Calendário</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Eficiência</th>
+          <th style="padding:9px 14px;width:100px"></th>
+        </tr></thead>
+        <tbody>
+          ${byPedido.map((p,idx)=>{
+            const ef=p.cal>0?Math.min(100,Math.round(p.hh/p.cal*100)):null;
+            const pct=Math.round(p.hh/maxPedHH*100);
+            return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
+              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${p.pedNum}</td>
+              <td style="padding:9px 14px;color:var(--tx);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.cliente}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--tx)">${fmtTime(p.hh)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx2)">${p.cal>0?fmtTime(p.cal):'—'}</td>
+              <td style="padding:9px 14px;text-align:right;font-weight:700;color:${ef===null?'var(--tx3)':ef>=80?'#16a34a':ef>=50?'#d97706':'#dc2626'}">${ef!==null?ef+'%':'—'}</td>
+              <td style="padding:9px 14px"><div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px"></div></div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`:noData}
+    </div>
+  </div>`;
+
+  // ─ Por Etapa ─
+  html+=`<div class="info-card" style="margin-bottom:20px">
+    <div class="ic-head" style="font-size:13px">📊 Tempo Médio por Etapa</div>
+    <div class="ic-body" style="padding:0">
+      ${etapasSorted.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--bg3)">
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Etapa</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Média</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Mín</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Máx</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Amostras</th>
+          <th style="padding:9px 14px;width:120px"></th>
+        </tr></thead>
+        <tbody>
+          ${etapasSorted.map(([nome,v],idx)=>{
+            const avg=v.hh/v.count;
+            const mn=Math.min(...v.times);const mx=Math.max(...v.times);
+            const pct=Math.round(avg/maxEtapaAvg*100);
+            return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
+              <td style="padding:9px 14px;font-weight:600;color:var(--tx)">${nome}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${fmtTime(avg)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${fmtTime(mn)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${fmtTime(mx)}</td>
+              <td style="padding:9px 14px;text-align:right;color:var(--tx2)">${v.count}</td>
+              <td style="padding:9px 14px"><div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#7c3aed;border-radius:3px"></div></div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`:noData}
+    </div>
+  </div>`;
+
+  // ─ Por Funcionário ─
+  html+=`<div class="info-card" style="margin-bottom:20px">
+    <div class="ic-head" style="font-size:13px">👤 Tempo Efetivo por Funcionário <span style="font-size:10px;color:var(--tx3);font-weight:400">(base de bonificação)</span></div>
+    <div class="ic-body" style="padding:0">
+      ${funcSorted.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--bg3)">
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Funcionário</th>
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Cargo</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">HH total</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Etapas</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Média/etapa</th>
+          <th style="padding:9px 14px;width:100px"></th>
+        </tr></thead>
+        <tbody>
+          ${funcSorted.map(([uid,v],idx)=>{
+            const u=USUARIOS.find(u=>u.id===uid);
+            const avg=v.hh/v.count;
+            const pct=Math.round(v.hh/maxFuncHH*100);
+            return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
+              <td style="padding:9px 14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${u?initials(u.nome):'?'}</div>
+                  <span style="font-weight:600;color:var(--tx)">${u?u.nome.split(' ').slice(0,2).join(' '):uid}</span>
+                </div>
+              </td>
+              <td style="padding:9px 14px;color:var(--tx3);font-size:11px">${u?.cargo||'—'}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#d97706">${fmtTime(v.hh)}</td>
+              <td style="padding:9px 14px;text-align:right;color:var(--tx2)">${v.count}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx2)">${fmtTime(avg)}</td>
+              <td style="padding:9px 14px"><div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#d97706;border-radius:3px"></div></div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`:noData}
+    </div>
+  </div>`;
+
+  // ─ Por Item ─
+  html+=`<div class="info-card" style="margin-bottom:20px">
+    <div class="ic-head" style="font-size:13px">🔩 Tempo Efetivo por Item <span style="font-size:10px;color:var(--tx3);font-weight:400">(horas-homem × calendário)</span></div>
+    <div class="ic-body" style="padding:0">
+      ${byItem.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--bg3)">
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Item / Produto</th>
+          <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Pedido</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">HH efetivo</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Calendário</th>
+          <th style="padding:9px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Eficiência</th>
+        </tr></thead>
+        <tbody>
+          ${byItem.slice(0,30).map((it,idx)=>{
+            const ef=it.cal>0?Math.min(100,Math.round(it.hh/it.cal*100)):null;
+            return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
+              <td style="padding:9px 14px;font-weight:600;color:var(--tx);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.prodNome}</td>
+              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">${it.pedNum}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#0891b2">${fmtTime(it.hh)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${it.cal>0?fmtTime(it.cal):'—'}</td>
+              <td style="padding:9px 14px;text-align:right;font-weight:700;color:${ef===null?'var(--tx3)':ef>=80?'#16a34a':ef>=50?'#d97706':'#dc2626'}">${ef!==null?ef+'%':'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`:noData}
+    </div>
+  </div>`;
+
+  // ─ Nota metodológica ─
+  html+=`<div style="padding:12px 16px;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;font-size:11px;color:var(--tx3);line-height:1.6">
+    <b style="color:var(--tx2)">HH efetivo</b> = soma dos <code>baseElapsed</code> por etapa (tempo de máquina/mão-de-obra ligada, sem contar pausas ou noites) &nbsp;·&nbsp;
+    <b style="color:var(--tx2)">Calendário</b> = <code>endAt − firstStartAt</code> (tempo decorrido no relógio, inclui esperas) &nbsp;·&nbsp;
+    <b style="color:var(--tx2)">Eficiência</b> = HH / Calendário × 100%
+  </div>`;
+
+  $('p6-body').innerHTML=html;
 }
 
 // ── Persistência no backend MongoDB ──────────────────────────
