@@ -309,6 +309,44 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .p5-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 8px;border-radius:20px;border:1px solid var(--bd);margin-bottom:14px}
 .p5-badge-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .p5-badge-nome{font-size:12px;font-weight:600;color:var(--tx)}
+
+/* QUADRO DIÁRIO */
+.qdl-counters{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.qdl-counter{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:16px 18px;box-shadow:var(--shadow)}
+.qdl-counter-val{font-size:30px;font-weight:800;line-height:1;margin-top:4px}
+.qdl-counter-lbl{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.qdl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.qdl-table-wrap{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden}
+.qdl-table-hdr{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.qdl-table-title{font-size:14px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:8px}
+.qdl-live{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--accent)}
+.qdl-live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:dbl 1.1s infinite}
+.qdl-table{width:100%;border-collapse:collapse;font-size:12px}
+.qdl-table th{padding:9px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:var(--bg3);white-space:nowrap;border-bottom:1px solid var(--bd)}
+.qdl-table td{padding:10px 14px;border-bottom:1px solid var(--bg3);vertical-align:middle}
+.qdl-table tr:last-child td{border-bottom:none}
+.qdl-table tr:hover td{background:var(--bg3)}
+.qdl-row-ocioso td{background:#fff7ed}
+.qdl-row-ocioso:hover td{background:#fef3c7!important}
+.qdl-warn{color:var(--amber);font-size:13px;margin-right:4px}
+.qdl-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.qdl-badge-trab{background:var(--accent-light);color:var(--accent);border:1px solid var(--green-100)}
+.qdl-badge-paus{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.qdl-badge-obra{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.qdl-badge-ocio{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.qdl-timer{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px}
+.qdl-timer-run{color:var(--accent)}
+.qdl-timer-paus{color:var(--amber)}
+.qdl-timer-obra{color:var(--blue)}
+.qdl-fila{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.qdl-fila-has{background:var(--accent-light);color:var(--accent);border-color:var(--green-100)}
+.qdl-pedido{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent)}
+.qdl-filters{display:flex;align-items:center;gap:8px;padding:12px 18px;background:var(--bg3);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.qdl-sel{font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none;cursor:pointer}
+.qdl-refresh-btn{display:flex;align-items:center;gap:5px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx2);cursor:pointer;transition:all .15s;margin-left:auto}
+.qdl-refresh-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.qdl-legend{display:flex;gap:16px;align-items:center;padding:10px 18px;border-top:1px solid var(--bd);background:var(--bg3);font-size:11px;color:var(--tx3);flex-wrap:wrap}
+.qdl-legend span{display:flex;align-items:center;gap:4px}
 </style>
 </head>
 <body>
@@ -341,6 +379,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
   <div class="sb-item" id="sb-dash" onclick="navToDash()">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 11h3v3H1v-3zm4-4h3v7H5V7zm4-4h3v11H9V3zm4-2h2v13h-2V1z"/></svg>
     Dashboard
+  </div>
+  <div class="sb-item" id="sb-quadro" onclick="navToQuadro()" style="display:none">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 1110 0H3z"/><circle cx="13" cy="5" r="2.5" fill="var(--green-300)"/></svg>
+    Quadro Diário
   </div>
   <div class="sb-bottom">
     <div class="sb-item" onclick="logout()" style="color:rgba(255,255,255,.35);font-size:12px;margin-bottom:4px">
@@ -492,6 +534,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     <!-- P6: DASHBOARD ANALÍTICO -->
     <div class="page" id="p6">
       <div id="p6-body" style="padding-bottom:32px"></div>
+    </div>
+
+    <!-- P7: QUADRO DIÁRIO — ATIVIDADE AO VIVO -->
+    <div class="page" id="p7">
+      <div id="p7-body" style="padding-bottom:32px"></div>
     </div>
 
   </div>
@@ -1067,6 +1114,7 @@ function loginAs(userId){
   currentUser=USUARIOS.find(u=>u.id===userId);if(!currentUser)return;
   $('p0-screen').style.display='none';
   $('shell').style.display='flex';
+  $('sb-quadro').style.display=currentUser.role==='gestor'?'flex':'none';
   const av=$('sb-av'),nm=$('sb-uname'),rl=$('sb-urole');
   if(av)av.textContent=initials(currentUser.nome);
   if(nm)nm.textContent=currentUser.apelido||currentUser.nome.split(' ')[0];
@@ -1293,12 +1341,25 @@ function renderP1(){
             badge='<span class="badge '+(paused?'b-amber':'b-blue')+'" style="font-size:10px">'+(paused?'Pausada':'Em andamento')+'</span>';
             info=ETAPAS[actIdx].nome+(op?' · '+op.nome.split(' ')[0]:'')+(el2>0?' · '+fmtTime(el2):'');
             ra='var(--accent)';
+            action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
+              +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Redemandar para…</option>'+opOpts+'</select>'
+              +'<button class="cbtn cbtn-reopen" style="font-size:11px;padding:4px 10px;border:1px solid var(--bd)" onclick="gestorRedemandarInline(\''+escJs(prod.key)+'\','+actIdx+',\''+sid+'\')">↺ Redemandar</button>'
+              +'</div>';
           } else {
             const e0=etapas[0];
             if(e0.assignedTo){
-              const op=USUARIOS.find(u=>u.id===e0.assignedTo);
+              // Encontra a próxima etapa pendente atribuída
+              const nextIdx=etapas.findIndex((e,i)=>ETAPAS[i].tipo==='producao'&&e.state==='pending'&&e.assignedTo);
+              const nextOp=nextIdx>=0?USUARIOS.find(u=>u.id===etapas[nextIdx].assignedTo):null;
+              const nextNome=nextIdx>=0?ETAPAS[nextIdx].nome:'';
               badge='<span class="badge b-gray" style="font-size:10px">Demandado</span>';
-              info=ETAPAS[0].nome+' → '+(op?.nome.split(' ')[0]||e0.assignedTo);
+              info=nextOp?(nextNome+' → '+nextOp.nome.split(' ')[0]):(ETAPAS[0].nome+' → '+(USUARIOS.find(u=>u.id===e0.assignedTo)?.nome.split(' ')[0]||e0.assignedTo));
+              if(nextIdx>=0){
+                action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
+                  +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Redemandar para…</option>'+opOpts+'</select>'
+                  +'<button class="cbtn cbtn-reopen" style="font-size:11px;padding:4px 10px;border:1px solid var(--bd)" onclick="gestorRedemandarInline(\''+escJs(prod.key)+'\','+nextIdx+',\''+sid+'\')">↺ Redemandar</button>'
+                  +'</div>';
+              }
             } else {
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
               action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
@@ -1379,6 +1440,20 @@ function gestorValidarInline(key,etapaIdx,selId){
   const nextCfg=ETAPAS[etapaIdx+1];
   saveProducaoState(key, 0);
   toast('Validado ✓ — '+(nextCfg?.nome||'produto concluído')+' atribuído a '+(op?.nome.split(' ')[0]||opId));
+  renderP1();
+}
+function gestorRedemandarInline(key,etapaIdx,selId){
+  const opId=$(selId)?.value;
+  if(!opId){toast('Selecione um operador para redemandar');return;}
+  const e=getEtapas(key)[etapaIdx];
+  // Se estava ativa, pausa preservando o tempo acumulado
+  if(e.state==='active'){e.baseElapsed=etapaElapsed(key,etapaIdx);e.state='paused';}
+  e.assignedTo=opId;
+  if(!pState[key])pState[key]={state:'idle'};
+  pState[key].state=derivedState(key);
+  saveProducaoState(key,0);
+  const op=USUARIOS.find(u=>u.id===opId);
+  toast('Redemandado ✓ — '+(ETAPAS[etapaIdx]?.nome||'etapa')+' → '+(op?.nome.split(' ')[0]||opId));
   renderP1();
 }
 function gestorDemandarInline(key,selId){
@@ -1665,13 +1740,37 @@ function renderDash(){
   $('p6-body').innerHTML=html;
 }
 
-// ── Persistência no backend MongoDB ──────────────────────────
+// ── Persistência no backend MongoDB + localStorage fallback ──
+const LS_PREFIX='prod_etapas_';
+
+function _saveLocal(key){
+  try{localStorage.setItem(LS_PREFIX+key,JSON.stringify(pEtapas[key]||[]));}
+  catch(e){console.warn('[producao] localStorage cheio ou indisponível');}
+}
+
+function _loadLocal(){
+  try{
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith(LS_PREFIX));
+    keys.forEach(lk=>{
+      const key=lk.slice(LS_PREFIX.length);
+      if(pEtapas[key])return; // backend já carregou, não sobrescreve
+      try{
+        const data=JSON.parse(localStorage.getItem(lk));
+        if(Array.isArray(data)){pEtapas[key]=data;pState[key]={state:derivedState(key)};}
+      }catch(_){}
+    });
+    console.log('[producao] estados locais carregados do localStorage');
+  }catch(e){}
+}
+
 function saveProducaoState(key, delay=400){
   if(!key)return;
+  // Salva imediatamente no localStorage (sempre disponível)
+  _saveLocal(key);
+  // Sincroniza com o backend de forma assíncrona
   clearTimeout(_saveTimer[key]);
   _saveTimer[key]=setTimeout(async()=>{
     const etapas=pEtapas[key]||[];
-    // Coleta observações deste key do localStorage
     const obs=[];
     for(let i=0;i<ETAPAS.length;i++){
       const txt=localStorage.getItem('obs_'+key+'_'+i);
@@ -1683,31 +1782,260 @@ function saveProducaoState(key, delay=400){
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({etapas,obs})
       });
-    }catch(e){console.warn('[producao] falha ao salvar (backend offline?):', key);}
+    }catch(e){console.warn('[producao] backend offline — estado salvo só no localStorage:', key);}
   }, delay);
 }
 
 async function loadProducaoStates(){
+  // Primeiro carrega localStorage (instantâneo, sem rede)
+  _loadLocal();
   try{
     const r=await fetch(PROD_API+'/api/producao');
-    if(!r.ok)return;
+    if(!r.ok)throw new Error('HTTP '+r.status);
     const docs=await r.json();
     docs.forEach(doc=>{
       if(!doc.key||!Array.isArray(doc.etapas))return;
       pEtapas[doc.key]=doc.etapas;
-      // Restaura observações no localStorage
+      // Atualiza localStorage com dados do backend (mais recentes)
+      _saveLocal(doc.key);
       (doc.obs||[]).forEach(o=>{
         if(o.text)localStorage.setItem('obs_'+doc.key+'_'+o.idx, o.text);
       });
     });
-    // Recalcula pState para todas as chaves carregadas
     Object.keys(pEtapas).forEach(k=>{
       pState[k]={state:derivedState(k)};
     });
-    console.log('[producao] estados carregados:',Object.keys(pEtapas).length,'produtos');
+    console.log('[producao] estados carregados do backend:',Object.keys(pEtapas).length,'produtos');
   }catch(e){
-    console.warn('[producao] backend offline — usando estado local');
+    console.warn('[producao] backend offline — usando localStorage como fonte principal');
+    // pEtapas já foi populado pelo _loadLocal() acima
+    Object.keys(pEtapas).forEach(k=>{
+      pState[k]={state:derivedState(k)};
+    });
   }
+}
+
+// ── Quadro Diário — Atividade ao Vivo ──────────────────────────
+let _quadroInterval=null;
+let _qdlFiltFunc='',_qdlFiltProd='',_qdlFiltEtapa='';
+
+function navToQuadro(){
+  if(currentUser?.role!=='gestor')return;
+  curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  setSbActive('sb-quadro');
+  setBread([{label:'Quadro Diário',active:true}]);setTitle('Quadro Diário — Ao Vivo');
+  renderQuadro();showPage('p7');
+  clearInterval(_quadroInterval);
+  _quadroInterval=setInterval(()=>{
+    if(!$('p7').classList.contains('active')){clearInterval(_quadroInterval);_quadroInterval=null;return;}
+    renderQuadroTimers();
+  },1000);
+}
+
+function _getQuadroRows(){
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);const ts=todayStart.getTime();
+  return USUARIOS.map(user=>{
+    let activeTask=null;
+    let todaySecs=0;
+    let pendingCount=0;
+    allData.forEach(proj=>{
+      (proj.grupos||[]).forEach(grupo=>{
+        const prods=getProdutosDoGrupo(grupo,proj._id);
+        prods.forEach((prod,pi)=>{
+          const etapas=getEtapas(prod.key);
+          etapas.forEach((e,i)=>{
+            if(ETAPAS[i].tipo!=='producao')return;
+            if(e.assignedTo!==user.id)return;
+            // hoje
+            if(e.firstStartAt&&e.firstStartAt>=ts){
+              const sec=e.baseElapsed||0;
+              todaySecs+=sec;
+              if(e.state==='active')todaySecs+=(Date.now()-e.startAt)/1000;
+            }
+            // tarefa atual
+            if((e.state==='active'||e.state==='paused')&&!activeTask){
+              const pedNum=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'#'+proj.numeroProposta;
+              activeTask={proj,grupo,prod,prodIdx:pi+1,etapaIdx:i,etapa:e,etapaCfg:ETAPAS[i],pedNum};
+            }
+            // fila: atribuído mas ainda não iniciado
+            if(e.state==='pending')pendingCount++;
+          });
+        });
+      });
+    });
+    // status
+    let status='ocioso';
+    if(activeTask){
+      const sn=(activeTask.etapaCfg.nome||'').toLowerCase();
+      const isInstall=sn.includes('instalação')||sn.includes('instalacao')||sn.includes('entrega');
+      if(activeTask.etapa.state==='active')status=isInstall?'em_obra':'trabalhando';
+      else if(activeTask.etapa.state==='paused')status='pausado';
+    }
+    return{user,activeTask,todaySecs,pendingCount,status};
+  });
+}
+
+function renderQuadro(){
+  const rows=_getQuadroRows();
+  const now=new Date();
+  const hhmm=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const dateFmt=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+
+  const cnt={trabalhando:0,pausado:0,em_obra:0,ocioso:0};
+  rows.forEach(r=>cnt[r.status]++);
+
+  // Filtros
+  const funcs=[...new Set(rows.filter(r=>r.activeTask).map(r=>r.user.nome.split(' ')[0]))].sort();
+  const etapas=[...new Set(rows.filter(r=>r.activeTask).map(r=>r.activeTask.etapaCfg.nome))];
+  const pedidos=[...new Set(rows.filter(r=>r.activeTask).map(r=>r.activeTask.pedNum))].sort();
+
+  const selF=`<select class="qdl-sel" id="qdl-f-func" onchange="_qdlFiltFunc=this.value;renderQuadro()">
+    <option value="">Todos os funcionários</option>
+    ${USUARIOS.map(u=>`<option value="${u.id}"${_qdlFiltFunc===u.id?' selected':''}>${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+  </select>`;
+  const selE=`<select class="qdl-sel" id="qdl-f-etapa" onchange="_qdlFiltEtapa=this.value;renderQuadro()">
+    <option value="">Todas as etapas</option>
+    ${etapas.map(e=>`<option value="${e}"${_qdlFiltEtapa===e?' selected':''}>${e}</option>`).join('')}
+  </select>`;
+
+  const filtered=rows.filter(r=>{
+    if(_qdlFiltFunc&&r.user.id!==_qdlFiltFunc)return false;
+    if(_qdlFiltEtapa&&(!r.activeTask||r.activeTask.etapaCfg.nome!==_qdlFiltEtapa))return false;
+    return true;
+  });
+
+  // Sort: trabalhando → em_obra → pausado → ocioso
+  const ORDER={trabalhando:0,em_obra:1,pausado:2,ocioso:3};
+  filtered.sort((a,b)=>ORDER[a.status]-ORDER[b.status]);
+
+  const statusBadge=s=>{
+    if(s==='trabalhando')return`<span class="qdl-badge qdl-badge-trab"><span class="qdl-dot" style="background:var(--accent)"></span>Trabalhando</span>`;
+    if(s==='pausado')return`<span class="qdl-badge qdl-badge-paus"><span class="qdl-dot" style="background:var(--amber)"></span>Pausado</span>`;
+    if(s==='em_obra')return`<span class="qdl-badge qdl-badge-obra"><span class="qdl-dot" style="background:var(--blue)"></span>Em Obra</span>`;
+    return`<span class="qdl-badge qdl-badge-ocio"><span class="qdl-dot" style="background:var(--red)"></span>Ocioso</span>`;
+  };
+
+  const timerCell=(row)=>{
+    if(!row.activeTask)return'<span style="color:var(--tx3)">—</span>';
+    const e=row.activeTask.etapa;
+    const i=row.activeTask.etapaIdx;
+    const k=row.activeTask.prod.key;
+    const secs=etapaElapsed(k,i);
+    const cls=row.status==='trabalhando'?'qdl-timer-run':row.status==='em_obra'?'qdl-timer-obra':'qdl-timer-paus';
+    const id='qdl-t-'+row.user.id;
+    return`<span class="qdl-timer ${cls}" id="${id}" data-key="${esc(k)}" data-idx="${i}">${fmtTime(secs)}</span>`;
+  };
+
+  const hojeCell=(row)=>{
+    if(!row.todaySecs&&row.status==='ocioso')return`<span style="color:var(--tx3)">0h</span>`;
+    const h=Math.floor(row.todaySecs/3600);
+    const m=Math.floor((row.todaySecs%3600)/60);
+    return`<span id="qdl-hj-${row.user.id}" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx2)">${h>0?h+'h ':''} ${m}min</span>`;
+  };
+
+  const filaCell=(row,isGestor)=>{
+    if(row.status==='ocioso'&&isGestor)
+      return`<button class="cbtn cbtn-start" style="font-size:10px;padding:3px 10px" onclick="navTo('p1')">Designar</button>`;
+    const n=row.pendingCount;
+    return`<span class="qdl-fila${n>0?' qdl-fila-has':''}">${n}</span>`;
+  };
+
+  const isGestor=currentUser?.role==='gestor';
+
+  const tableRows=filtered.map(row=>{
+    const at=row.activeTask;
+    const nomeCurto=row.user.apelido||row.user.nome.split(' ')[0];
+    const ocioso=row.status==='ocioso';
+    return`<tr class="${ocioso?'qdl-row-ocioso':''}">
+      <td><div style="display:flex;align-items:center;gap:8px">
+        ${ocioso?`<span class="qdl-warn">⚠</span>`:''}
+        <div style="width:28px;height:28px;border-radius:50%;background:${row.user.role==='gestor'?'var(--accent)':'var(--green-700)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials(row.user.nome)}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${nomeCurto}</div>
+          <div style="font-size:10px;color:var(--tx3)">${row.user.cargo.split(' ').slice(0,2).join(' ')}</div>
+        </div>
+      </div></td>
+      <td>${statusBadge(row.status)}</td>
+      <td>${at?`<span class="qdl-pedido">${esc(at.pedNum)}</span>`:'<span style="color:var(--tx3)">—</span>'}</td>
+      <td style="color:var(--tx2)">${at?at.prodIdx:'<span style="color:var(--tx3)">—</span>'}</td>
+      <td style="font-weight:600;color:var(--tx);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${at?esc(at.etapaCfg.nome):'<span style="color:var(--tx3)">—</span>'}</td>
+      <td style="color:var(--tx2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${at?esc(at.prod.nome):'<span style="color:var(--tx3)">—</span>'}</td>
+      <td>${timerCell(row)}</td>
+      <td>${hojeCell(row)}</td>
+      <td>${filaCell(row,isGestor)}</td>
+    </tr>`;
+  }).join('');
+
+  let html=`
+  <div class="qdl-counters">
+    <div class="qdl-counter">
+      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--accent)"></span> Trabalhando</div>
+      <div class="qdl-counter-val" style="color:var(--accent)">${cnt.trabalhando}</div>
+    </div>
+    <div class="qdl-counter">
+      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--amber)"></span> Pausados</div>
+      <div class="qdl-counter-val" style="color:var(--amber)">${cnt.pausado}</div>
+    </div>
+    <div class="qdl-counter">
+      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--blue)"></span> Em Obra</div>
+      <div class="qdl-counter-val" style="color:var(--blue)">${cnt.em_obra}</div>
+    </div>
+    <div class="qdl-counter">
+      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--red)"></span> Ociosos</div>
+      <div class="qdl-counter-val" style="color:var(--red)">${cnt.ocioso}</div>
+    </div>
+  </div>
+  <div class="qdl-table-wrap">
+    <div class="qdl-filters">
+      ${selF}${selE}
+      <button class="qdl-refresh-btn" onclick="renderQuadro()">↻ Atualizar</button>
+      <span style="font-size:11px;color:var(--tx3);margin-left:8px">${dateFmt} · ${hhmm}</span>
+    </div>
+    <div class="qdl-table-hdr">
+      <div class="qdl-table-title">
+        🗓 Quadro diário — atividade ao vivo
+      </div>
+      <div class="qdl-live"><span class="qdl-live-dot"></span> Ao vivo</div>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="qdl-table">
+      <thead><tr>
+        <th>Funcionário</th><th>Status</th><th>Pedido</th><th>Item</th>
+        <th>Etapa</th><th>Componente</th><th>Timer</th><th>Hoje</th><th>Fila</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    </div>
+    <div class="qdl-legend">
+      <span><span class="qdl-dot" style="background:var(--accent)"></span> Trabalhando</span>
+      <span><span class="qdl-dot" style="background:var(--amber)"></span> Pausado</span>
+      <span><span class="qdl-dot" style="background:var(--blue)"></span> Em Obra</span>
+      <span><span class="qdl-dot" style="background:var(--red)"></span> Ocioso — designar tarefa</span>
+    </div>
+  </div>`;
+
+  $('p7-body').innerHTML=html;
+}
+
+function renderQuadroTimers(){
+  // Atualiza só os timers e tempo de hoje sem re-renderizar a tabela inteira
+  const rows=_getQuadroRows();
+  rows.forEach(row=>{
+    // Timer
+    const tEl=$('qdl-t-'+row.user.id);
+    if(tEl){
+      const k=tEl.dataset.key;
+      const i=parseInt(tEl.dataset.idx);
+      tEl.textContent=fmtTime(etapaElapsed(k,i));
+    }
+    // Hoje
+    const hEl=$('qdl-hj-'+row.user.id);
+    if(hEl){
+      const h=Math.floor(row.todaySecs/3600);
+      const m=Math.floor((row.todaySecs%3600)/60);
+      hEl.textContent=(h>0?h+'h ':'')+' '+m+'min';
+    }
+  });
 }
 
 async function init(){
