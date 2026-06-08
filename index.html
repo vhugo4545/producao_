@@ -1447,9 +1447,12 @@ function renderP1(){
               }
             } else {
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
-              action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
-                +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Atribuir a…</option>'+opOpts+'</select>'
-                +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorDemandarInline(\''+escJs(prod.key)+'\',\''+sid+'\')">→ Demandar</button>'
+              const etSid=sid+'_et';
+              const etOpts=ETAPAS.map((e,i)=>e.tipo==='producao'&&i>=2?'<option value="'+i+'">'+esc(e.nome)+'</option>':'').join('');
+              action='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px">'
+                +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Operador…</option>'+opOpts+'</select>'
+                +'<select id="'+etSid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="2">Etapa: Desenho</option>'+etOpts+'</select>'
+                +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorDemandarInline(\''+escJs(prod.key)+'\',\''+sid+'\',\''+etSid+'\')">→ Demandar</button>'
                 +'</div>';
             }
           }
@@ -1541,22 +1544,23 @@ function gestorRedemandarInline(key,etapaIdx,selId){
   toast('Redemandado ✓ — '+(ETAPAS[etapaIdx]?.nome||'etapa')+' → '+(op?.nome.split(' ')[0]||opId));
   renderP1();
 }
-function gestorDemandarInline(key,selId){
+function gestorDemandarInline(key,selId,etSelId){
   const opId=$(selId)?.value;
   if(!opId){toast('Selecione um operador para demandar');return;}
   const etapas=getEtapas(key);const now=Date.now();
-  // Etapa 0: "Supervisor de Produção" — o próprio ato de demandar É a supervisão; marca concluído
+  // Etapa 0: Supervisor de Produção — concluída automaticamente
   etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
   etapas[0].firstStartAt=now;etapas[0].startAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
-  // Etapa 1: validação gestor da supervisão — auto-concluída junto com o ato de demandar
+  // Etapa 1: validação gestor — auto-concluída
   etapas[1].state='done';etapas[1].endAt=now;
-  // Etapa 2: próxima etapa de produção ("Desenho") → atribuída ao operador escolhido
-  if(etapas[2])etapas[2].assignedTo=opId;
+  // Etapa de produção escolhida (padrão: 2 = Desenho)
+  const etIdx=parseInt($(etSelId)?.value||'2')||2;
+  if(etapas[etIdx])etapas[etIdx].assignedTo=opId;
   if(!pState[key])pState[key]={state:'idle'};pState[key].state=derivedState(key);
   const op=USUARIOS.find(u=>u.id===opId);
-  const nextNome=ETAPAS[2]?.nome||'próxima etapa';
+  const nextNome=ETAPAS[etIdx]?.nome||'próxima etapa';
   saveProducaoState(key, 0);
-  toast('Demandado ✓ — '+nextNome+' atribuído a '+(op?.nome.split(' ')[0]||opId));
+  toast('Demandado ✓ — '+nextNome+' → '+(op?.nome.split(' ')[0]||opId));
   renderP1();
 }
 function saveObs(){
