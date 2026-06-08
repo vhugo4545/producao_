@@ -38,6 +38,60 @@ const producaoSchema = new mongoose.Schema({
 
 const Producao = mongoose.model('Producao', producaoSchema);
 
+// ── Schema FilaProducao ──────────────────────────────────────
+const filaProducaoSchema = new mongoose.Schema({
+  lead_id:          { type: Number, required: true, unique: true },
+  numero_pedido:    { type: String, default: null, maxlength: 64 },
+  numero_orcamento: { type: String, default: null, maxlength: 64 },
+  referencia:       { type: String, required: true, maxlength: 128 },
+  evento:           { type: String, default: 'supervisor_producao', maxlength: 64 },
+  entrou_em:        { type: Date,   default: Date.now },
+}, { timestamps: true });
+
+const FilaProducao = mongoose.model('FilaProducao', filaProducaoSchema);
+
+// ── POST /api/fila-producao — recebe notificação do Kommo ────
+app.post('/api/fila-producao', async (req, res) => {
+  const { evento, lead_id, numero_pedido, numero_orcamento, referencia } = req.body;
+
+  if (!lead_id || !referencia) {
+    return res.status(400).json({ error: 'lead_id e referencia são obrigatórios' });
+  }
+
+  try {
+    const doc = await FilaProducao.findOneAndUpdate(
+      { lead_id: Number(lead_id) },
+      {
+        $set: {
+          evento:           evento           || 'supervisor_producao',
+          numero_pedido:    numero_pedido    || null,
+          numero_orcamento: numero_orcamento || null,
+          referencia:       String(referencia).slice(0, 128),
+          entrou_em:        new Date(),
+        },
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    console.log('[FILA] ✅ Lead [' + lead_id + '] registrado — ref: ' + referencia);
+    res.status(201).json({ ok: true, doc });
+  } catch (err) {
+    console.error('[POST /api/fila-producao]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── GET /api/fila-producao — lista todos ─────────────────────
+app.get('/api/fila-producao', async (_req, res) => {
+  try {
+    const docs = await FilaProducao.find({}, '-__v').sort({ entrou_em: -1 }).lean();
+    res.json({ total: docs.length, itens: docs });
+  } catch (err) {
+    console.error('[GET /api/fila-producao]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // ── Validação de entrada ─────────────────────────────────────
 const MAX_ETAPAS = 64;
 
