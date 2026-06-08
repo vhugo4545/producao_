@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ulhoa Metais — Produção</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Inconsolata:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --green-900:#0d2214;--green-800:#153320;--green-700:#1c4a2e;
@@ -24,7 +24,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;overflow:hidden}
-.mono{font-family:'JetBrains Mono',monospace}
+.mono{font-family:'Inconsolata',monospace}
 
 .shell{display:flex;height:100vh;overflow:hidden}
 
@@ -108,7 +108,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .proj-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
 .proj-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md);transform:translateX(2px)}
 .proj-card:hover .arrow-btn{background:var(--accent);color:#fff}
-.proj-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);min-width:48px;font-weight:500}
+.proj-num{font-family:'Inconsolata',monospace;font-size:11px;color:#111;min-width:48px;font-weight:500}
 .proj-main{flex:1;min-width:0}
 .proj-name{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .proj-loc{font-size:11px;color:var(--tx2);margin-top:2px}
@@ -141,7 +141,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .grupo-prog-wrap{display:flex;align-items:center;gap:8px;margin-top:6px}
 .grupo-prog-track{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
 .grupo-prog-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease}
-.grupo-prog-lbl{font-size:10px;color:var(--tx3);white-space:nowrap;font-family:'JetBrains Mono',monospace}
+.grupo-prog-lbl{font-size:10px;color:var(--tx3);white-space:nowrap;font-family:'Inconsolata',monospace}
 
 /* PRODUTO CARD (P3) — agora é o produto, ex: Montante H */
 .prod-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
@@ -160,7 +160,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .dot.done{background:var(--blue);border-color:var(--blue)}
 @keyframes dbl{0%,100%{box-shadow:0 0 0 3px rgba(46,125,80,.2)}50%{box-shadow:0 0 0 6px rgba(46,125,80,.06)}}
 
-.sm-timer{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx3);min-width:50px;text-align:right;font-weight:500}
+.sm-timer{font-family:'Inconsolata',monospace;font-size:12px;color:#111;min-width:50px;text-align:right;font-weight:500}
 .sm-timer.running{color:var(--accent)}
 .sm-timer.paused{color:var(--amber)}
 .sm-timer.done{color:var(--blue)}
@@ -169,7 +169,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .p4-grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
 
 .timer-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rxl);padding:32px 24px;text-align:center;box-shadow:var(--shadow-md);margin-bottom:14px}
-.big-timer{font-family:'JetBrains Mono',monospace;font-size:82px;font-weight:500;color:var(--tx);letter-spacing:-.02em;line-height:1;transition:color .2s}
+.big-timer{font-family:'Inconsolata',monospace;font-size:82px;font-weight:500;color:var(--tx);letter-spacing:-.02em;line-height:1;transition:color .2s}
 .big-timer.running{color:var(--accent)}
 .big-timer.paused{color:var(--amber)}
 .big-timer.done{color:var(--blue)}
@@ -202,14 +202,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .hist-item{display:grid;grid-template-columns:22px 1fr auto;gap:0 10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bg3);transition:background .15s}
 .hist-item:last-child{border-bottom:none}
 .hist-item:hover{background:var(--bg3)}
-.hist-idx{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx3);font-weight:500}
-.hist-range{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx);font-weight:500}
+.hist-idx{font-family:'Inconsolata',monospace;font-size:10px;color:var(--tx3);font-weight:500}
+.hist-range{font-family:'Inconsolata',monospace;font-size:11px;color:var(--tx);font-weight:500}
 .hist-date{font-size:10px;color:var(--tx3);margin-top:2px}
-.hist-dur{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap}
+.hist-dur{font-family:'Inconsolata',monospace;font-size:12px;color:#111;font-weight:600;white-space:nowrap}
 .hist-ongoing{font-size:11px;color:var(--accent);font-weight:600;animation:fade 1.4s infinite}
 @keyframes fade{0%,100%{opacity:1}50%{opacity:.4}}
 .hist-footer{padding:10px 16px;background:var(--bg3);border-top:1px solid var(--bd);display:flex;gap:20px}
-.hf-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--tx)}
+.hf-val{font-family:'Inconsolata',monospace;font-size:14px;font-weight:600;color:#111}
 .hf-lbl{font-size:10px;color:var(--tx3);margin-top:1px}
 
 /* RIGHT SIDE CARDS */
@@ -227,16 +227,16 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .insumo-row{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--bg3);transition:background .15s}
 .insumo-row:last-child{border-bottom:none}
 .insumo-row:hover{background:var(--bg3)}
-.insumo-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx3);min-width:18px;margin-top:2px;font-weight:500}
+.insumo-num{font-family:'Inconsolata',monospace;font-size:10px;color:var(--tx3);min-width:18px;margin-top:2px;font-weight:500}
 .insumo-info{flex:1;min-width:0}
 .insumo-nome{font-size:12px;font-weight:500;color:var(--tx);line-height:1.4}
 .insumo-util{font-size:11px;color:var(--tx3);margin-top:2px}
-.insumo-qtd{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx2);white-space:nowrap;margin-top:2px;font-weight:500}
+.insumo-qtd{font-family:'Inconsolata',monospace;font-size:11px;color:var(--tx2);white-space:nowrap;margin-top:2px;font-weight:500}
 
 /* PROGRESS HERO */
 .prog-hero{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);padding:16px 18px;box-shadow:var(--shadow);margin-bottom:20px}
 .ph-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
-.ph-pct{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:var(--accent)}
+.ph-pct{font-family:'Inconsolata',monospace;font-size:28px;font-weight:600;color:var(--accent)}
 .ph-track{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;border:1px solid var(--bd)}
 .ph-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green-300));border-radius:3px;transition:width .5s ease}
 .ph-lbl{font-size:12px;color:var(--tx2);margin-top:6px}
@@ -254,7 +254,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .pag-btn{font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:6px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
 .pag-btn:hover:not(:disabled){background:var(--accent);color:#fff;border-color:var(--accent)}
 .pag-btn:disabled{opacity:.35;cursor:not-allowed}
-.pag-info{font-size:11px;color:var(--tx3);font-family:'JetBrains Mono',monospace}
+.pag-info{font-size:11px;color:#111;font-family:'Inconsolata',monospace}
 
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -274,7 +274,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .etapa-bar{width:4px;height:28px;border-radius:2px;flex-shrink:0}
 .etapa-info{flex:1;min-width:0}
 .etapa-nome{font-size:12px;font-weight:600;color:var(--tx);line-height:1.3}
-.etapa-ts{font-size:10px;color:var(--tx3);font-family:'JetBrains Mono',monospace;margin-top:2px;line-height:1.6}
+.etapa-ts{font-size:10px;color:var(--tx3);font-family:'Inconsolata',monospace;margin-top:2px;line-height:1.6}
 .etapa-act{flex-shrink:0;display:flex;gap:4px}
 .etapa-btn{font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:5px 11px;border-radius:7px;cursor:pointer;border:none;transition:all .13s;white-space:nowrap}
 .etapa-btn:active{transform:scale(.97)}
@@ -334,13 +334,13 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .qdl-badge-paus{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
 .qdl-badge-obra{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
 .qdl-badge-ocio{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
-.qdl-timer{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px}
+.qdl-timer{font-family:'Inconsolata',monospace;font-weight:600;font-size:12px}
 .qdl-timer-run{color:var(--accent)}
 .qdl-timer-paus{color:var(--amber)}
 .qdl-timer-obra{color:var(--blue)}
 .qdl-fila{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
 .qdl-fila-has{background:var(--accent-light);color:var(--accent);border-color:var(--green-100)}
-.qdl-pedido{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent)}
+.qdl-pedido{font-family:'Inconsolata',monospace;font-size:11px;font-weight:600;color:#111}
 .qdl-filters{display:flex;align-items:center;gap:8px;padding:12px 18px;background:var(--bg3);border-bottom:1px solid var(--bd);flex-wrap:wrap}
 .qdl-sel{font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none;cursor:pointer}
 .qdl-refresh-btn{display:flex;align-items:center;gap:5px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx2);cursor:pointer;transition:all .15s;margin-left:auto}
@@ -859,22 +859,22 @@ function renderP5Ctrl(){
       <div style="display:flex;flex-direction:column;gap:5px">
         ${e.firstStartAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
           <span style="color:var(--tx3)">Início</span>
-          <span style="font-family:'JetBrains Mono',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span>
+          <span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span>
         </div>`:''}
         ${e.endAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
           <span style="color:var(--tx3)">Conclusão</span>
-          <span style="font-family:'JetBrains Mono',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span>
+          <span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span>
         </div>`:''}
         ${elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)">
           <span style="color:var(--tx)">Total</span>
-          <span style="font-family:'JetBrains Mono',monospace;color:var(--accent)">${fmtTime(elapsed)}</span>
+          <span style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(elapsed)}</span>
         </div>`:''}
       </div>
       ${currentUser?.role==='gestor'?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
         <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Ajustar tempo</div>
         <div style="display:flex;gap:6px;align-items:center">
           <input id="p5-adj-inp" type="text" placeholder="${fmtTime(elapsed)}"
-            style="flex:1;font-size:14px;font-family:'JetBrains Mono',monospace;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;text-align:center">
+            style="flex:1;font-size:14px;font-family:'Inconsolata',monospace;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;text-align:center">
           <button class="cbtn" style="padding:8px 12px;font-size:12px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);white-space:nowrap" onclick="p5AjustarTempo()">Aplicar</button>
         </div>
         <div style="font-size:10px;color:var(--tx3);margin-top:4px;text-align:center">formato: h:mm:ss ou mm:ss</div>
@@ -979,8 +979,8 @@ function openEtapa(idx){
     ${isGestor?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Valida</div><div class="ic-value" style="font-size:13px">${cfg.gestorFor}</div></div>`:''}
     ${isGestor&&cfg.nextProd?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Próxima</div><div class="ic-value" style="font-size:13px">${cfg.nextProd}</div></div>`:''}
     ${assignedOp?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Operador</div><div class="ic-value" style="font-size:13px">${assignedOp.nome}</div></div>`:''}
-    ${e.firstStartAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Início</div><div class="ic-value" style="font-size:12px;font-family:'JetBrains Mono',monospace">${fmtTs(e.firstStartAt)} ${fmtDate(e.firstStartAt)}</div></div>`:''}
-    ${e.endAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Conclusão</div><div class="ic-value" style="font-size:12px;font-family:'JetBrains Mono',monospace">${fmtTs(e.endAt)} ${fmtDate(e.endAt)}</div></div>`:''}
+    ${e.firstStartAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Início</div><div class="ic-value" style="font-size:12px;font-family:'Inconsolata',monospace">${fmtTs(e.firstStartAt)} ${fmtDate(e.firstStartAt)}</div></div>`:''}
+    ${e.endAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Conclusão</div><div class="ic-value" style="font-size:12px;font-family:'Inconsolata',monospace">${fmtTs(e.endAt)} ${fmtDate(e.endAt)}</div></div>`:''}
   </div>`;
   const pedNum=curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta;
   $('p5-prod-body').innerHTML=`<div class="ic-row">
@@ -1483,7 +1483,7 @@ function renderP1(){
       +'<div style="width:5px;background:'+accent+';flex-shrink:0"></div>'
       +'<div style="flex:1;padding:14px 16px;display:flex;align-items:center;gap:16px;min-width:0">'
       +'<div style="flex-shrink:0;text-align:center;min-width:68px">'
-      +'<div style="font-size:17px;font-weight:800;color:'+accent+';line-height:1;font-family:\'JetBrains Mono\',monospace;letter-spacing:-.5px">'+esc(p.pedNum)+'</div>'
+      +'<div style="font-size:17px;font-weight:800;color:#111;line-height:1;font-family:\'Inconsolata\',monospace;letter-spacing:-.5px">'+esc(p.pedNum)+'</div>'
       +'<div style="font-size:9px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em">Pedido</div>'
       +'</div>'
       +'<div style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
@@ -1705,10 +1705,10 @@ function renderDash(){
             const ef=p.cal>0?Math.min(100,Math.round(p.hh/p.cal*100)):null;
             const pct=Math.round(p.hh/maxPedHH*100);
             return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
-              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${esc(p.pedNum)}</td>
+              <td style="padding:9px 14px;font-family:'Inconsolata',monospace;font-weight:700;color:var(--accent)">${esc(p.pedNum)}</td>
               <td style="padding:9px 14px;color:var(--tx);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.cliente)}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--tx)">${fmtTime(p.hh)}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx2)">${p.cal>0?fmtTime(p.cal):'—'}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;font-weight:600;color:var(--tx)">${fmtTime(p.hh)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;color:var(--tx2)">${p.cal>0?fmtTime(p.cal):'—'}</td>
               <td style="padding:9px 14px;text-align:right;font-weight:700;color:${ef===null?'var(--tx3)':ef>=80?'#16a34a':ef>=50?'#d97706':'#dc2626'}">${ef!==null?ef+'%':'—'}</td>
               <td style="padding:9px 14px"><div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px"></div></div></td>
             </tr>`;
@@ -1738,9 +1738,9 @@ function renderDash(){
             const pct=Math.round(avg/maxEtapaAvg*100);
             return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
               <td style="padding:9px 14px;font-weight:600;color:var(--tx)">${nome}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${fmtTime(avg)}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${fmtTime(mn)}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${fmtTime(mx)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;font-weight:700;color:var(--accent)">${fmtTime(avg)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;color:var(--tx3)">${fmtTime(mn)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;color:var(--tx3)">${fmtTime(mx)}</td>
               <td style="padding:9px 14px;text-align:right;color:var(--tx2)">${v.count}</td>
               <td style="padding:9px 14px"><div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#7c3aed;border-radius:3px"></div></div></td>
             </tr>`;
@@ -1776,9 +1776,9 @@ function renderDash(){
                 </div>
               </td>
               <td style="padding:9px 14px;color:var(--tx3);font-size:11px">${u?.cargo||'—'}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#d97706">${fmtTime(v.hh)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;font-weight:700;color:#d97706">${fmtTime(v.hh)}</td>
               <td style="padding:9px 14px;text-align:right;color:var(--tx2)">${v.count}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx2)">${fmtTime(avg)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTime(avg)}</td>
               <td style="padding:9px 14px"><div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#d97706;border-radius:3px"></div></div></td>
             </tr>`;
           }).join('')}
@@ -1804,9 +1804,9 @@ function renderDash(){
             const ef=it.cal>0?Math.min(100,Math.round(it.hh/it.cal*100)):null;
             return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
               <td style="padding:9px 14px;font-weight:600;color:var(--tx);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.prodNome)}</td>
-              <td style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">${esc(it.pedNum)}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#0891b2">${fmtTime(it.hh)}</td>
-              <td style="padding:9px 14px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--tx3)">${it.cal>0?fmtTime(it.cal):'—'}</td>
+              <td style="padding:9px 14px;font-family:'Inconsolata',monospace;font-size:11px;color:var(--accent)">${esc(it.pedNum)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;font-weight:700;color:#0891b2">${fmtTime(it.hh)}</td>
+              <td style="padding:9px 14px;text-align:right;font-family:'Inconsolata',monospace;color:var(--tx3)">${it.cal>0?fmtTime(it.cal):'—'}</td>
               <td style="padding:9px 14px;text-align:right;font-weight:700;color:${ef===null?'var(--tx3)':ef>=80?'#16a34a':ef>=50?'#d97706':'#dc2626'}">${ef!==null?ef+'%':'—'}</td>
             </tr>`;
           }).join('')}
@@ -2015,7 +2015,7 @@ function renderQuadro(){
     if(!row.todaySecs&&row.status==='ocioso')return`<span style="color:var(--tx3)">0h</span>`;
     const h=Math.floor(row.todaySecs/3600);
     const m=Math.floor((row.todaySecs%3600)/60);
-    return`<span id="qdl-hj-${row.user.id}" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx2)">${h>0?h+'h ':''} ${m}min</span>`;
+    return`<span id="qdl-hj-${row.user.id}" style="font-family:'Inconsolata',monospace;font-size:11px;color:var(--tx2)">${h>0?h+'h ':''} ${m}min</span>`;
   };
 
   const filaCell=(row,isGestor)=>{
