@@ -656,6 +656,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 
 <script>
 const API='https://ulhoa-0a02024d350a.herokuapp.com/api/propostas';
+const API_BASE='https://ulhoa-0a02024d350a.herokuapp.com';
 const PROD_API='https://app-producao-b843a894d7ea.herokuapp.com'; // backend de produção (MongoDB)
 const _saveTimer={};
 
@@ -705,6 +706,41 @@ const ETAPAS=ETAPAS_PROD.flatMap((e,i)=>[
 const TOTAL_PROD=ETAPAS_PROD.length;
 
 let allData=[],curPage=1,totPages=1;
+// IDs/keys ocultos (soft-delete) — localStorage como cache, servidor como fonte permanente
+const _hiddenPedidos=new Set(JSON.parse(localStorage.getItem('hidden_pedidos')||'[]'));
+const _hiddenProdutos=new Set(JSON.parse(localStorage.getItem('hidden_produtos')||'[]'));
+
+function _saveHiddenLocal(){
+  localStorage.setItem('hidden_pedidos',JSON.stringify([..._hiddenPedidos]));
+  localStorage.setItem('hidden_produtos',JSON.stringify([..._hiddenProdutos]));
+}
+async function _postHidden(type,ref){
+  try{
+    await fetch(API_BASE+'/api/hidden',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,ref})});
+  }catch(_){/* servidor offline — já salvo em localStorage */}
+}
+async function _carregarHidden(){
+  try{
+    const r=await fetch(API_BASE+'/api/hidden');
+    if(!r.ok)return;
+    const d=await r.json();
+    (d.pedidos||[]).forEach(id=>_hiddenPedidos.add(id));
+    (d.produtos||[]).forEach(k=>_hiddenProdutos.add(k));
+    _saveHiddenLocal();
+  }catch(_){/* usa localStorage */}
+}
+function excluirPedido(id){
+  if(!confirm('Excluir este pedido da lista?'))return;
+  _hiddenPedidos.add(id);_saveHiddenLocal();
+  _postHidden('pedido',id);
+  if(_expandedProjId===id)_expandedProjId=null;
+  toast('Pedido removido');renderP1();
+}
+function excluirProduto(key){
+  _hiddenProdutos.add(key);_saveHiddenLocal();
+  _postHidden('produto',key);
+  toast('Produto removido');renderP1();
+}
 let curProj=null,curGrupo=null,curProd=null,curKey=null,curEtapaIdx=null;
 let _p5Raf=null,currentUser=null;
 const pState={};
@@ -1008,6 +1044,8 @@ function openEtapa(idx){
     <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(curProd.nome)}</div></div>
     <div class="ic-div"></div>
     <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
+    <div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.ambiente||'—')}</div></div>
     <div class="ic-div"></div>
     <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(pedNum)}</div></div>
     <div class="ic-div"></div>
@@ -1363,14 +1401,14 @@ function renderP1(){
 
   // ── Filtro de busca ──
   const q=_searchQuery;
-  const filtered=q?projs.filter(p=>
+  const filtered=(q?projs.filter(p=>
     p.pedNum.toLowerCase().includes(q)||
     p.cliente.toLowerCase().includes(q)||
     p.cidade.toLowerCase().includes(q)
-  ):projs;
+  ):projs).filter(p=>!_hiddenPedidos.has(p.proj._id));
 
   // Barra de busca (sempre renderizada no topo)
-  const searchBar=`<div style="margin-bottom:14px;position:relative">
+  const searchBar=`<div style="position:sticky;top:0;z-index:50;background:var(--bg);padding-bottom:12px;margin-bottom:2px"><div style="position:relative">
     <div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:15px;pointer-events:none">🔍</div>
     <input id="p1-search" type="text" value="${q.replace(/"/g,'&quot;')}"
       placeholder="Buscar por pedido, cliente ou cidade…"
@@ -1378,7 +1416,7 @@ function renderP1(){
       style="width:100%;box-sizing:border-box;padding:11px 14px 11px 38px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);color:var(--tx);outline:none;transition:border-color .15s;box-shadow:var(--shadow)"
       onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'">
     ${q?`<button onclick="searchP1('')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:4px">✕</button>`:''}
-  </div>`;
+  </div></div>`;
 
   if(!filtered.length){
     $('p1-body').innerHTML=searchBar+(q
@@ -1412,7 +1450,7 @@ function renderP1(){
     if(isOpen){
       let ri=0;
       (p.proj.grupos||[]).forEach(grupo=>{
-        getProdutosDoGrupo(grupo,p.proj._id).forEach(prod=>{
+        getProdutosDoGrupo(grupo,p.proj._id).filter(prod=>!_hiddenProdutos.has(prod.key)).forEach(prod=>{
           const etapas=getEtapas(prod.key);
           const state=derivedState(prod.key);
           const psd=etapas.filter((e,i)=>ETAPAS[i].tipo==='producao'&&e.state==='done').length;
@@ -1492,6 +1530,7 @@ function renderP1(){
             +'</div>'
             +'<button class="cbtn" style="font-size:10px;padding:3px 8px;color:var(--tx2);border-color:var(--bd)" '
             +'onclick="gestorAbrirProduto(\''+escJs(p.proj._id)+'\',\''+escJs(grupo._id)+'\',\''+escJs(prod.key)+'\')">Detalhes ›</button>'
+            +'<button title="Excluir produto" style="border:none;background:none;cursor:pointer;padding:4px 6px;color:var(--tx3);font-size:13px;border-radius:6px;transition:all .15s" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\'" onmouseout="this.style.background=\'none\';this.style.color=\'var(--tx3)\'" onclick="excluirProduto(\''+escJs(prod.key)+'\')">🗑</button>'
             +'</div>'
             +'</div>';
         });
@@ -1521,6 +1560,7 @@ function renderP1(){
         +'</div>':'')
       +'</div>'
       +'<div style="flex-shrink:0;color:var(--tx3);font-size:13px;width:18px;text-align:center">'+(isOpen?'▲':'▼')+'</div>'
+      +'<button onclick="event.stopPropagation();excluirPedido(\''+escJs(p.proj._id)+'\')" title="Excluir pedido" style="flex-shrink:0;border:none;background:none;cursor:pointer;padding:4px 6px;color:var(--tx3);font-size:14px;border-radius:6px;transition:all .15s" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\'" onmouseout="this.style.background=\'none\';this.style.color=\'var(--tx3)\'">🗑</button>'
       +'</div>'
       +'</div>'
       +rows
@@ -2266,6 +2306,7 @@ function renderQuadroTimers(){
 
 async function init(){
   renderLogin();
+  _carregarHidden(); // carrega itens ocultos do servidor em background
   try{
     // Página 1 imediata — usuário vê dados em ~1s
     const j=await fetchPagina(1,100);

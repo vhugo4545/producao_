@@ -187,5 +187,58 @@ app.delete('/api/producao/:key', async (req, res) => {
   }
 });
 
+// ── Schema Hidden (soft-delete de pedidos e produtos) ────────
+const hiddenSchema = new mongoose.Schema({
+  type: { type: String, enum: ['pedido', 'produto'], required: true },
+  ref:  { type: String, required: true, maxlength: 512 },
+}, { timestamps: true });
+hiddenSchema.index({ type: 1, ref: 1 }, { unique: true });
+const Hidden = mongoose.model('Hidden', hiddenSchema);
+
+// GET /api/hidden — retorna todos os itens ocultos
+app.get('/api/hidden', async (_req, res) => {
+  try {
+    const docs = await Hidden.find({}, 'type ref -_id').lean();
+    const pedidos  = docs.filter(d => d.type === 'pedido').map(d => d.ref);
+    const produtos = docs.filter(d => d.type === 'produto').map(d => d.ref);
+    res.json({ pedidos, produtos });
+  } catch (err) {
+    console.error('[GET /api/hidden]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// POST /api/hidden — oculta um item { type, ref }
+app.post('/api/hidden', async (req, res) => {
+  const { type, ref } = req.body;
+  if (!['pedido', 'produto'].includes(type) || !ref || typeof ref !== 'string' || ref.length > 512) {
+    return res.status(400).json({ error: 'Parâmetros inválidos' });
+  }
+  try {
+    await Hidden.findOneAndUpdate(
+      { type, ref },
+      { type, ref },
+      { upsert: true, new: true, runValidators: true }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[POST /api/hidden]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// DELETE /api/hidden — restaura um item { type, ref }
+app.delete('/api/hidden', async (req, res) => {
+  const { type, ref } = req.body;
+  if (!type || !ref) return res.status(400).json({ error: 'Parâmetros inválidos' });
+  try {
+    await Hidden.deleteOne({ type, ref });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[DELETE /api/hidden]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // ── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`[server] Rodando na porta ${PORT}`));
