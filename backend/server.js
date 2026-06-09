@@ -30,10 +30,17 @@ const obsSchema = new mongoose.Schema({
   text: { type: String, maxlength: 2000 },
 }, { _id: false });
 
+const comentarioSchema = new mongoose.Schema({
+  text:     { type: String, required: true, maxlength: 2000 },
+  ts:       { type: Number, required: true },
+  userName: { type: String, maxlength: 64, default: '' },
+}, { _id: false });
+
 const producaoSchema = new mongoose.Schema({
-  key:    { type: String, required: true, unique: true, maxlength: 512 },
-  etapas: { type: [etapaSchema], default: [] },
-  obs:    { type: [obsSchema],   default: [] },
+  key:        { type: String, required: true, unique: true, maxlength: 512 },
+  etapas:     { type: [etapaSchema],    default: [] },
+  obs:        { type: [obsSchema],      default: [] },
+  comentarios:{ type: [comentarioSchema], default: [] },
 }, { timestamps: true });
 
 const Producao = mongoose.model('Producao', producaoSchema);
@@ -170,6 +177,43 @@ app.put('/api/producao/:key', async (req, res) => {
     res.json(doc);
   } catch (err) {
     console.error('[PUT /api/producao/:key]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// GET /api/producao/:key/comentarios
+app.get('/api/producao/:key/comentarios', async (req, res) => {
+  const key = decodeURIComponent(req.params.key);
+  if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
+  try {
+    const doc = await Producao.findOne({ key }, 'comentarios').lean();
+    res.json(doc?.comentarios || []);
+  } catch (err) {
+    console.error('[GET comentarios]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// POST /api/producao/:key/comentarios
+app.post('/api/producao/:key/comentarios', async (req, res) => {
+  const key = decodeURIComponent(req.params.key);
+  if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
+  const { text, userName } = req.body;
+  if (!text || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Texto obrigatório' });
+  const comentario = {
+    text: text.trim().slice(0, 2000),
+    ts: Date.now(),
+    userName: (userName || '').toString().slice(0, 64),
+  };
+  try {
+    await Producao.findOneAndUpdate(
+      { key },
+      { $push: { comentarios: comentario } },
+      { upsert: true, new: true, runValidators: true }
+    );
+    res.status(201).json(comentario);
+  } catch (err) {
+    console.error('[POST comentarios]', err.message);
     res.status(500).json({ error: 'Erro interno' });
   }
 });

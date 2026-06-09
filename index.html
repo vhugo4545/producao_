@@ -260,6 +260,31 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 
+/* SANFONA */
+.sf-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.sf-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;transition:background .15s;gap:10px}
+.sf-head:hover{background:var(--bg3)}
+.sf-head-left{flex:1;min-width:0}
+.sf-title{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em}
+.sf-subtitle{font-size:13px;font-weight:700;color:var(--tx);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-chev{font-size:11px;color:var(--tx3);flex-shrink:0;transition:transform .2s}
+.sf-chev.open{transform:rotate(180deg)}
+.sf-body{display:none;border-top:1px solid var(--bd)}
+.sf-body.open{display:block}
+/* COMENTÁRIOS */
+.comt-list{max-height:300px;overflow-y:auto}
+.comt-item{padding:12px 16px;border-bottom:1px solid var(--bg3)}
+.comt-item:last-child{border-bottom:none}
+.comt-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.comt-user{font-size:11px;font-weight:700;color:var(--tx2)}
+.comt-ts{font-size:10px;font-family:'Inconsolata',monospace;color:var(--tx3)}
+.comt-text{font-size:12px;color:var(--tx);line-height:1.6;white-space:pre-wrap}
+.comt-input-wrap{padding:10px 12px;border-top:1px solid var(--bd);display:flex;gap:8px;align-items:flex-end;background:var(--bg3)}
+.comt-textarea{flex:1;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--tx);background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;resize:none;outline:none;transition:border-color .15s;line-height:1.5}
+.comt-btn{font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;padding:8px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap;transition:background .15s}
+.comt-btn:hover{background:var(--green-600)}
+.comt-empty{padding:16px;text-align:center;font-size:12px;color:var(--tx3)}
+
 /* ETAPAS */
 .etapas-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden}
 .etapas-head{padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--tx);background:var(--bg3)}
@@ -606,18 +631,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
             <div id="etapas-body"></div>
           </div>
         </div>
-        <div class="p4-right">
-          <div class="info-card" id="p4-info-card">
-            <div class="ic-head">Produto</div>
-            <div class="ic-body" id="p4-info-body"></div>
-          </div>
-          <div class="info-card" id="p4-insumos-card">
-            <div class="ic-head" style="display:flex;align-items:center;justify-content:space-between">
-              Insumos
-              <span class="badge b-gray" id="insumos-count"></span>
-            </div>
-            <div class="insumo-list" id="p4-insumos-body"></div>
-          </div>
+        <div class="p4-right" id="p4-right-panel">
+          <!-- sanfonas renderizadas por renderP4Right() -->
         </div>
       </div>
     </div>
@@ -640,21 +655,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
             <div class="ctrl-row" id="p5-ctrl"></div>
           </div>
         </div>
-        <div class="p4-right">
-          <div class="info-card">
-            <div class="ic-head">Etapa</div>
-            <div class="ic-body" id="p5-etapa-body"></div>
-          </div>
-          <div class="info-card">
-            <div class="ic-head">Produto</div>
-            <div class="ic-body" id="p5-prod-body"></div>
-          </div>
-          <div class="info-card">
-            <div class="ic-head">Observações</div>
-            <div class="ic-body" style="padding:10px">
-              <textarea id="p5-obs" oninput="saveObs()" placeholder="Adicione observações sobre esta etapa…" style="width:100%;min-height:90px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--tx);background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:10px;resize:vertical;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'"></textarea>
-            </div>
-          </div>
+        <div class="p4-right" id="p5-right-panel">
+          <!-- sanfonas renderizadas por renderP4Right() -->
         </div>
       </div>
     </div>
@@ -1086,44 +1088,21 @@ function openEtapa(idx){
   $('p5-badge-nome').textContent=cfg.nome;
   renderP5State();renderP5Ctrl();
   const assignedOp=e.assignedTo?USUARIOS.find(u=>u.id===e.assignedTo):null;
-  $('p5-etapa-body').innerHTML=`<div class="ic-row">
-    <div class="ic-field"><div class="ic-label">Etapa</div><div class="ic-value">${cfg.nome}</div></div>
-    ${isGestor?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Valida</div><div class="ic-value" style="font-size:13px">${cfg.gestorFor}</div></div>`:''}
-    ${isGestor&&cfg.nextProd?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Próxima</div><div class="ic-value" style="font-size:13px">${cfg.nextProd}</div></div>`:''}
-    ${assignedOp?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Operador</div><div class="ic-value" style="font-size:13px">${assignedOp.nome}</div></div>`:''}
-    ${e.firstStartAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Início</div><div class="ic-value" style="font-size:12px;font-family:'Inconsolata',monospace">${fmtTs(e.firstStartAt)} ${fmtDate(e.firstStartAt)}</div></div>`:''}
-    ${e.endAt?`<div class="ic-div"></div><div class="ic-field"><div class="ic-label">Conclusão</div><div class="ic-value" style="font-size:12px;font-family:'Inconsolata',monospace">${fmtTs(e.endAt)} ${fmtDate(e.endAt)}</div></div>`:''}
-  </div>`;
-  const pedNum=curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta;
-  $('p5-prod-body').innerHTML=`<div class="ic-row">
-    <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(curProd.nome)}</div></div>
-    ${curProd.obs?`<div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Descrição</div><div class="ic-value" style="font-size:12px;line-height:1.6;white-space:pre-line;color:var(--tx2)">${esc(curProd.obs)}</div></div>`:''}
-    <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
-    <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.ambiente||'—')}</div></div>
-    <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(pedNum)}</div></div>
-    <div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Cliente</div><div class="ic-value" style="font-size:13px">${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
-    ${(()=>{
-      const cf=curProj.camposFormulario||{};
-      const campos=[
-        {label:'Rua',val:cf.ruaObra},
-        {label:'Número',val:cf.numeroObra},
-        {label:'Complemento',val:cf.complementoObra},
-        {label:'Bairro',val:cf.bairroObra},
-        {label:'Cidade',val:cf.cidadeObra},
-        {label:'Estado',val:cf.estadoObra},
-        {label:'CEP',val:cf.cepObra},
-      ].map(c=>({label:c.label,val:c.val?.trim()||'—'}));
-      return campos.map(c=>`<div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:13px">${esc(c.val)}</div></div>`).join('');
-    })()}
-  </div>`;
-  // Load saved observation
-  const obsEl=$('p5-obs');if(obsEl)obsEl.value=localStorage.getItem('obs_'+k+'_'+idx)||'';
+  // Renderiza sanfonas no painel P5
+  renderP4Right('p5-right-panel');
+  // Injeta card de Etapa como primeira sanfona
+  const etapaCampos=[
+    {label:'Etapa',val:esc(cfg.nome),size:13},
+    ...(isGestor?[{label:'Valida',val:esc(cfg.gestorFor),size:13}]:[]),
+    ...(isGestor&&cfg.nextProd?[{label:'Próxima',val:esc(cfg.nextProd),size:13}]:[]),
+    ...(assignedOp?[{label:'Operador',val:esc(assignedOp.nome),size:13}]:[]),
+    ...(e.firstStartAt?[{label:'Início',val:fmtTs(e.firstStartAt)+' '+fmtDate(e.firstStartAt),size:12,style:"font-family:'Inconsolata',monospace"}]:[]),
+    ...(e.endAt?[{label:'Conclusão',val:fmtTs(e.endAt)+' '+fmtDate(e.endAt),size:12,style:"font-family:'Inconsolata',monospace"}]:[]),
+  ];
+  const panel=document.getElementById('p5-right-panel');
+  if(panel){
+    panel.insertAdjacentHTML('afterbegin',_sfCard('sf-etapa','Etapa atual',esc(cfg.nome),_infoRowsHtml(etapaCampos),true));
+  }
   if(!isGestor&&e.state==='active')startP5Loop();
   const prodLabel=curProd.nome.slice(0,15)+(curProd.nome.length>15?'…':'');
   const etapaLabel=cfg.nome.slice(0,16)+(cfg.nome.length>16?'…':'');
@@ -1290,39 +1269,7 @@ function openProd(prod){
   if(!curProj||!curGrupo)return;
   curProd=prod;curKey=prod.key;
   if(!pState[curKey])pState[curKey]={state:'idle'};
-  const _cf4=curProj.camposFormulario||{};
-  const _obraFields=[
-    {label:'Rua',val:_cf4.ruaObra},{label:'Número',val:_cf4.numeroObra},
-    {label:'Complemento',val:_cf4.complementoObra},{label:'Bairro',val:_cf4.bairroObra},
-    {label:'Cidade',val:_cf4.cidadeObra},{label:'Estado',val:_cf4.estadoObra},
-    {label:'CEP',val:_cf4.cepObra},
-  ].map(c=>({label:c.label,val:c.val?.trim()||'—'}));
-  $('p4-info-body').innerHTML=`
-    <div class="ic-row">
-      <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(prod.nome)}</div></div>
-      ${prod.obs?`<div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Descrição</div><div class="ic-value" style="font-size:12px;line-height:1.6;white-space:pre-line;color:var(--tx2)">${esc(prod.obs)}</div></div>`:''}
-      <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
-      <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.ambiente||'—')}</div></div>
-      <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(curProj.numeroPedido?.trim()||_cf4.numeroPedido?.trim()||'#'+curProj.numeroProposta)} — ${esc(_cf4.clientes?.[0]?.nome_razao_social||'—')}</div></div>
-      ${_obraFields.map(c=>`<div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:13px">${esc(c.val.trim())}</div></div>`).join('')}
-    </div>`;
-  const insumos=prod.insumos||[];
-  $('insumos-count').textContent=insumos.length+' insumo'+(insumos.length!==1?'s':'');
-  $('p4-insumos-body').innerHTML=insumos.length?insumos.map((ins,i)=>`
-    <div class="insumo-row">
-      <div class="insumo-num">${i+1}</div>
-      <div class="insumo-info">
-        <div class="insumo-nome">${ins.nome_produto}</div>
-        ${ins.descricao_utilizacao?`<div class="insumo-util">${ins.descricao_utilizacao}</div>`:''}
-      </div>
-      <div class="insumo-qtd">Qtd ${ins.quantidade}</div>
-    </div>`).join('')
-  :'<div class="hist-empty">Sem insumos</div>';
+  renderP4Right('p4-right-panel');
   renderEtapas();
   const label=prod.nome.slice(0,22)+(prod.nome.length>22?'…':'');
   setBread([{label:'Pedidos',pg:'p1'},{label:curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||('#'+curProj.numeroProposta),pg:'p2'},{label:curGrupo.nome,pg:'p3'},{label:label,active:true}]);
@@ -1859,11 +1806,149 @@ function gestorDemandarInline(key,selId,etSelId){
   toast('Demandado ✓ — '+nextNome+' → '+(op?.nome.split(' ')[0]||opId));
   renderP1();
 }
-function saveObs(){
-  const obs=$('p5-obs');
-  if(!obs||curKey===null||curEtapaIdx===null)return;
-  localStorage.setItem('obs_'+curKey+'_'+curEtapaIdx,obs.value);
-  saveProducaoState(curKey, 1200); // debounce 1.2s — não salva a cada tecla
+function saveObs(){} // mantido por compatibilidade
+
+// ── SANFONAS P4 / P5 ─────────────────────────────────────────
+function _sfCard(id,title,subtitle,bodyHtml,startOpen){
+  return`<div class="sf-card">
+    <div class="sf-head" onclick="_sfToggle('${id}')">
+      <div class="sf-head-left">
+        <div class="sf-title">${title}</div>
+        ${subtitle?`<div class="sf-subtitle">${subtitle}</div>`:''}
+      </div>
+      <span class="sf-chev${startOpen?' open':''}">▼</span>
+    </div>
+    <div class="sf-body${startOpen?' open':''}" id="${id}">${bodyHtml}</div>
+  </div>`;
+}
+function _sfToggle(id){
+  const body=document.getElementById(id);if(!body)return;
+  const head=body.previousElementSibling;
+  const chev=head?.querySelector('.sf-chev');
+  const open=body.classList.toggle('open');
+  if(chev)chev.classList.toggle('open',open);
+}
+
+function _infoRowsHtml(campos){
+  return`<div class="ic-body"><div class="ic-row">`
+    +campos.map((c,i)=>(i?'<div class="ic-div"></div>':'')+`<div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:${c.size||13}px;${c.style||''}">${c.val}</div></div>`).join('')
+    +`</div></div>`;
+}
+
+function _comentariosHtml(){
+  return`<div class="comt-list" id="p5-comentarios"><div class="comt-empty">Nenhuma observação ainda.</div></div>
+  <div class="comt-input-wrap">
+    <textarea class="comt-textarea" id="p5-obs-input" placeholder="Escreva uma observação…" rows="2"
+      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();adicionarComentario()}"></textarea>
+    <button class="comt-btn" onclick="adicionarComentario()">Adicionar</button>
+  </div>`;
+}
+
+function renderP4Right(panelId){
+  const panel=document.getElementById(panelId);if(!panel||!curProd||!curProj||!curGrupo)return;
+  const cf=curProj.camposFormulario||{};
+  const pedNum=curProj.numeroPedido?.trim()||cf.numeroPedido?.trim()||'#'+curProj.numeroProposta;
+  const cliente=cf.clientes?.[0]?.nome_razao_social||'—';
+  const obraFields=[
+    {label:'Rua',val:cf.ruaObra?.trim()||'—'},{label:'Número',val:cf.numeroObra?.trim()||'—'},
+    {label:'Complemento',val:cf.complementoObra?.trim()||'—'},{label:'Bairro',val:cf.bairroObra?.trim()||'—'},
+    {label:'Cidade',val:cf.cidadeObra?.trim()||'—'},{label:'Estado',val:cf.estadoObra?.trim()||'—'},
+    {label:'CEP',val:cf.cepObra?.trim()||'—'},
+  ];
+  // card Produto
+  const prodCampos=[
+    {label:'Produto',val:esc(curProd.nome),size:13},
+    ...(curProd.obs?[{label:'Descrição',val:esc(curProd.obs),size:12,style:'line-height:1.6;white-space:pre-line;color:var(--tx2)'}]:[]),
+    {label:'Grupo',val:esc(curGrupo.nome),size:13},
+    {label:'Ambiente',val:esc(curGrupo.ambiente||'—'),size:13},
+    {label:'Pedido',val:esc(pedNum)+' — '+esc(cliente),size:13},
+    ...obraFields.map(f=>({label:f.label,val:esc(f.val),size:13})),
+  ];
+  // card Insumos
+  const insumos=curProd.insumos||[];
+  const insCnt=insumos.length;
+  const insHtml=insCnt?`<div class="insumo-list">`
+    +insumos.map((ins,i)=>`<div class="insumo-row">
+      <div class="insumo-num">${i+1}</div>
+      <div class="insumo-info">
+        <div class="insumo-nome">${esc(ins.nome_produto)}</div>
+        ${ins.descricao_utilizacao?`<div class="insumo-util">${esc(ins.descricao_utilizacao)}</div>`:''}
+      </div>
+      <div class="insumo-qtd">Qtd ${ins.quantidade}</div>
+    </div>`).join('')+`</div>`
+    :'<div class="comt-empty">Sem insumos cadastrados.</div>';
+  // monta sanfonas
+  panel.innerHTML=
+    _sfCard('sf-prod','Produto',esc(curProd.nome),_infoRowsHtml(prodCampos),true)
+    +_sfCard('sf-ins','Insumos',insCnt+' item'+(insCnt!==1?'s':''),insHtml,false)
+    +_sfCard('sf-obs','Observações','Comentários internos',_comentariosHtml(),true);
+  // marca elementos legados para compatibilidade
+  const dummy=document.createElement('div');dummy.style.display='none';
+  ['p4-info-body','p4-insumos-body','insumos-count','p5-prod-body','p5-etapa-body'].forEach(id=>{
+    if(!document.getElementById(id)){const d=dummy.cloneNode();d.id=id;panel.appendChild(d);}
+  });
+  _carregarComentarios();
+}
+
+// ── COMENTÁRIOS ──────────────────────────────────────────────
+function _comentariosKey(){return'comentarios_'+curKey;}
+
+function _carregarComentarios(){
+  const el=$('p5-comentarios');if(!el||!curKey)return;
+  const local=JSON.parse(localStorage.getItem(_comentariosKey())||'[]');
+  _renderComentarios(local);
+  // busca do servidor em background
+  fetch(API_BASE+'/api/producao/'+encodeURIComponent(curKey)+'/comentarios')
+    .then(r=>r.ok?r.json():local)
+    .then(lista=>{
+      // merge: servidor é fonte da verdade
+      localStorage.setItem(_comentariosKey(),JSON.stringify(lista));
+      _renderComentarios(lista);
+    }).catch(()=>{});
+}
+
+function _renderComentarios(lista){
+  const el=$('p5-comentarios');if(!el)return;
+  if(!lista.length){
+    el.innerHTML='<div style="padding:14px 16px;font-size:12px;color:var(--tx3);text-align:center">Nenhuma observação ainda.</div>';
+    return;
+  }
+  el.innerHTML=lista.map(c=>{
+    const d=new Date(c.ts);
+    const data=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    const hora=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return`<div style="padding:12px 16px;border-bottom:1px solid var(--bg3)">`
+      +`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">`
+        +`<span style="font-size:11px;font-weight:700;color:var(--tx2)">${esc(c.userName||'—')}</span>`
+        +`<span style="font-size:10px;font-family:'Inconsolata',monospace;color:var(--tx3)">${data} ${hora}</span>`
+      +`</div>`
+      +`<div style="font-size:12px;color:var(--tx);line-height:1.6;white-space:pre-wrap">${esc(c.text)}</div>`
+      +`</div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+async function adicionarComentario(){
+  const input=$('p5-obs-input');
+  if(!input||!curKey)return;
+  const text=input.value.trim();
+  if(!text){input.focus();return;}
+  const userName=currentUser?.nome||'—';
+  const comentario={text,ts:Date.now(),userName};
+  // salva local imediatamente
+  const lista=JSON.parse(localStorage.getItem(_comentariosKey())||'[]');
+  lista.push(comentario);
+  localStorage.setItem(_comentariosKey(),JSON.stringify(lista));
+  _renderComentarios(lista);
+  input.value='';
+  // envia ao servidor
+  try{
+    await fetch(API_BASE+'/api/producao/'+encodeURIComponent(curKey)+'/comentarios',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,userName})
+    });
+  }catch(_){}
 }
 function toggleResp(sid){
   const s=$('rs-'+sid),c=$('rc-'+sid);if(!s)return;
