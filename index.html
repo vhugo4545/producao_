@@ -759,12 +759,12 @@ function _saveHiddenLocal(){
 }
 async function _postHidden(type,ref){
   try{
-    await fetch(API_BASE+'/api/hidden',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,ref})});
+    await fetch(PROD_API+'/api/hidden',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,ref})});
   }catch(_){/* servidor offline — já salvo em localStorage */}
 }
 async function _carregarHidden(){
   try{
-    const r=await fetch(API_BASE+'/api/hidden');
+    const r=await fetch(PROD_API+'/api/hidden');
     if(!r.ok)return;
     const d=await r.json();
     (d.pedidos||[]).forEach(id=>_hiddenPedidos.add(id));
@@ -1919,7 +1919,7 @@ function _carregarComentarios(){
   const local=JSON.parse(localStorage.getItem(_comentariosKey())||'[]');
   _renderComentarios(local);
   // busca do servidor em background
-  fetch(API_BASE+'/api/producao/'+encodeURIComponent(curKey)+'/comentarios')
+  fetch(PROD_API+'/api/producao/'+encodeURIComponent(curKey)+'/comentarios')
     .then(r=>r.ok?r.json():local)
     .then(lista=>{
       // merge: servidor é fonte da verdade
@@ -1967,7 +1967,7 @@ async function adicionarComentario(){
   if(inputR)inputR.value='';
   // envia ao servidor
   try{
-    await fetch(API_BASE+'/api/producao/'+encodeURIComponent(curKey)+'/comentarios',{
+    await fetch(PROD_API+'/api/producao/'+encodeURIComponent(curKey)+'/comentarios',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({text,userName})
     });
