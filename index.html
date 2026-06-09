@@ -1109,11 +1109,18 @@ function openEtapa(idx){
     <div class="ic-field"><div class="ic-label">Cliente</div><div class="ic-value" style="font-size:13px">${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
     ${(()=>{
       const cf=curProj.camposFormulario||{};
-      const partes=[cf.ruaObra,cf.numeroObra,cf.complementoObra,cf.bairroObra,cf.cidadeObra,cf.estadoObra,cf.cepObra].filter(Boolean);
-      if(!partes.length)return'';
-      const end=partes.join(', ');
-      return`<div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">Endereço da Obra</div><div class="ic-value" style="font-size:12px;line-height:1.6;color:var(--tx2)">${esc(end)}</div></div>`;
+      const campos=[
+        {label:'Rua',val:cf.ruaObra},
+        {label:'Número',val:cf.numeroObra},
+        {label:'Complemento',val:cf.complementoObra},
+        {label:'Bairro',val:cf.bairroObra},
+        {label:'Cidade',val:cf.cidadeObra},
+        {label:'Estado',val:cf.estadoObra},
+        {label:'CEP',val:cf.cepObra},
+      ].filter(c=>c.val&&c.val.trim());
+      if(!campos.length)return'';
+      return campos.map(c=>`<div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:13px">${esc(c.val.trim())}</div></div>`).join('');
     })()}
   </div>`;
   // Load saved observation
@@ -1284,15 +1291,26 @@ function openProd(prod){
   if(!curProj||!curGrupo)return;
   curProd=prod;curKey=prod.key;
   if(!pState[curKey])pState[curKey]={state:'idle'};
+  const _cf4=curProj.camposFormulario||{};
+  const _obraFields=[
+    {label:'Rua',val:_cf4.ruaObra},{label:'Número',val:_cf4.numeroObra},
+    {label:'Complemento',val:_cf4.complementoObra},{label:'Bairro',val:_cf4.bairroObra},
+    {label:'Cidade',val:_cf4.cidadeObra},{label:'Estado',val:_cf4.estadoObra},
+    {label:'CEP',val:_cf4.cepObra},
+  ].filter(c=>c.val&&c.val.trim());
   $('p4-info-body').innerHTML=`
     <div class="ic-row">
-      <div class="ic-field"><div class="ic-label">Nome</div><div class="ic-value">${esc(prod.nome)}</div></div>
+      <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(prod.nome)}</div></div>
+      ${prod.obs?`<div class="ic-div"></div>
+      <div class="ic-field"><div class="ic-label">Descrição</div><div class="ic-value" style="font-size:12px;line-height:1.6;white-space:pre-line;color:var(--tx2)">${esc(prod.obs)}</div></div>`:''}
       <div class="ic-div"></div>
       <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
       <div class="ic-div"></div>
       <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.ambiente||'—')}</div></div>
       <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta)} — ${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
+      <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(curProj.numeroPedido?.trim()||_cf4.numeroPedido?.trim()||'#'+curProj.numeroProposta)} — ${esc(_cf4.clientes?.[0]?.nome_razao_social||'—')}</div></div>
+      ${_obraFields.map(c=>`<div class="ic-div"></div>
+      <div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:13px">${esc(c.val.trim())}</div></div>`).join('')}
     </div>`;
   const insumos=prod.insumos||[];
   $('insumos-count').textContent=insumos.length+' insumo'+(insumos.length!==1?'s':'');
