@@ -1117,10 +1117,9 @@ function openEtapa(idx){
         {label:'Cidade',val:cf.cidadeObra},
         {label:'Estado',val:cf.estadoObra},
         {label:'CEP',val:cf.cepObra},
-      ].filter(c=>c.val&&c.val.trim());
-      if(!campos.length)return'';
+      ].map(c=>({label:c.label,val:c.val?.trim()||'—'}));
       return campos.map(c=>`<div class="ic-div"></div>
-    <div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:13px">${esc(c.val.trim())}</div></div>`).join('');
+    <div class="ic-field"><div class="ic-label">${c.label}</div><div class="ic-value" style="font-size:13px">${esc(c.val)}</div></div>`).join('');
     })()}
   </div>`;
   // Load saved observation
@@ -1297,7 +1296,7 @@ function openProd(prod){
     {label:'Complemento',val:_cf4.complementoObra},{label:'Bairro',val:_cf4.bairroObra},
     {label:'Cidade',val:_cf4.cidadeObra},{label:'Estado',val:_cf4.estadoObra},
     {label:'CEP',val:_cf4.cepObra},
-  ].filter(c=>c.val&&c.val.trim());
+  ].map(c=>({label:c.label,val:c.val?.trim()||'—'}));
   $('p4-info-body').innerHTML=`
     <div class="ic-row">
       <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(prod.nome)}</div></div>
