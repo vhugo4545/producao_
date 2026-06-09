@@ -462,6 +462,27 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 </div>
 
 <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+<!-- MODAL REMOVER -->
+<div class="modal-overlay" id="rm-overlay" style="display:none" onclick="if(event.target===this)fecharModalRemover()">
+  <div class="modal-box" style="width:min(360px,calc(100vw - 24px))">
+    <div class="modal-title" style="margin-bottom:4px">Confirmar remoção</div>
+    <div class="modal-sub">Insira suas credenciais de administrador para continuar.</div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Usuário</div>
+      <input id="rm-user" type="text" placeholder="@admin" style="width:100%;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:9px 12px;border-radius:8px;border:1px solid var(--bd);outline:none;color:var(--tx);transition:border .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')document.getElementById('rm-pass').focus()">
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Senha</div>
+      <input id="rm-pass" type="password" placeholder="••••••" style="width:100%;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:9px 12px;border-radius:8px;border:1px solid var(--bd);outline:none;color:var(--tx);transition:border .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')confirmarRemover()">
+    </div>
+    <div id="rm-erro" style="display:none;font-size:12px;color:var(--red);background:var(--red-bg);border:1px solid var(--red-bd);border-radius:7px;padding:8px 12px;margin-bottom:14px">Usuário ou senha incorretos.</div>
+    <div class="modal-actions">
+      <button class="cbtn cbtn-reopen" onclick="fecharModalRemover()">Cancelar</button>
+      <button class="cbtn" style="background:var(--red);color:#fff;border:none" onclick="confirmarRemover()">Remover</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DEMANDAR -->
 <div class="modal-overlay" id="dm-overlay" style="display:none" onclick="if(event.target===this)fecharModalDemandar()">
   <div class="modal-box dm-modal" id="dm-box"></div>
@@ -562,6 +583,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
       <div class="detail-hero" id="p2-hero"></div>
       <div class="section-hdr"><div><div class="section-title">Grupos de Produção</div><div class="section-sub" id="p2-sub"></div></div></div>
       <div class="cards-grid" id="p2-body"></div>
+      <div id="p2-cond-gerais" style="display:none"></div>
     </div>
 
     <!-- P3: PRODUTOS DO GRUPO (ex: Montante H, Vidro, Instalação) -->
@@ -729,17 +751,50 @@ async function _carregarHidden(){
     _saveHiddenLocal();
   }catch(_){/* usa localStorage */}
 }
+let _rmPendente=null; // {tipo:'pedido'|'produto', ref:string}
+
 function excluirPedido(id){
-  if(!confirm('Excluir este pedido da lista?'))return;
-  _hiddenPedidos.add(id);_saveHiddenLocal();
-  _postHidden('pedido',id);
-  if(_expandedProjId===id)_expandedProjId=null;
-  toast('Pedido removido');renderP1();
+  _rmPendente={tipo:'pedido',ref:id};
+  _abrirModalRemover();
 }
 function excluirProduto(key){
-  _hiddenProdutos.add(key);_saveHiddenLocal();
-  _postHidden('produto',key);
-  toast('Produto removido');renderP1();
+  _rmPendente={tipo:'produto',ref:key};
+  _abrirModalRemover();
+}
+function _abrirModalRemover(){
+  document.getElementById('rm-user').value='';
+  document.getElementById('rm-pass').value='';
+  document.getElementById('rm-erro').style.display='none';
+  document.getElementById('rm-overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('rm-user').focus(),80);
+}
+function fecharModalRemover(){
+  document.getElementById('rm-overlay').style.display='none';
+  _rmPendente=null;
+}
+function confirmarRemover(){
+  const user=document.getElementById('rm-user').value.trim().replace(/^@/,'');
+  const pass=document.getElementById('rm-pass').value;
+  if(user!=='admin'||pass!=='123456'){
+    const el=document.getElementById('rm-erro');
+    el.style.display='block';
+    document.getElementById('rm-pass').value='';
+    document.getElementById('rm-pass').focus();
+    return;
+  }
+  fecharModalRemover();
+  if(!_rmPendente)return;
+  if(_rmPendente.tipo==='pedido'){
+    const id=_rmPendente.ref;
+    _hiddenPedidos.add(id);_saveHiddenLocal();_postHidden('pedido',id);
+    if(_expandedProjId===id)_expandedProjId=null;
+    toast('Pedido removido');renderP1();
+  } else {
+    const key=_rmPendente.ref;
+    _hiddenProdutos.add(key);_saveHiddenLocal();_postHidden('produto',key);
+    toast('Produto removido');renderP1();
+  }
+  _rmPendente=null;
 }
 let curProj=null,curGrupo=null,curProd=null,curKey=null,curEtapaIdx=null;
 let _p5Raf=null,currentUser=null;
@@ -1042,6 +1097,8 @@ function openEtapa(idx){
   const pedNum=curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta;
   $('p5-prod-body').innerHTML=`<div class="ic-row">
     <div class="ic-field"><div class="ic-label">Produto</div><div class="ic-value">${esc(curProd.nome)}</div></div>
+    ${curProd.obs?`<div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">Descrição</div><div class="ic-value" style="font-size:12px;line-height:1.6;white-space:pre-line;color:var(--tx2)">${esc(curProd.obs)}</div></div>`:''}
     <div class="ic-div"></div>
     <div class="ic-field"><div class="ic-label">Grupo</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.nome)}</div></div>
     <div class="ic-div"></div>
@@ -1050,6 +1107,14 @@ function openEtapa(idx){
     <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(pedNum)}</div></div>
     <div class="ic-div"></div>
     <div class="ic-field"><div class="ic-label">Cliente</div><div class="ic-value" style="font-size:13px">${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
+    ${(()=>{
+      const cf=curProj.camposFormulario||{};
+      const partes=[cf.ruaObra,cf.numeroObra,cf.complementoObra,cf.bairroObra,cf.cidadeObra,cf.estadoObra,cf.cepObra].filter(Boolean);
+      if(!partes.length)return'';
+      const end=partes.join(', ');
+      return`<div class="ic-div"></div>
+    <div class="ic-field"><div class="ic-label">Endereço da Obra</div><div class="ic-value" style="font-size:12px;line-height:1.6;color:var(--tx2)">${esc(end)}</div></div>`;
+    })()}
   </div>`;
   // Load saved observation
   const obsEl=$('p5-obs');if(obsEl)obsEl.value=localStorage.getItem('obs_'+k+'_'+idx)||'';
@@ -1081,6 +1146,7 @@ function getProdutosDoGrupo(grupo,propId){
     return acabados.map(i=>({
       nome:i.nome_produto,
       key:prodKey(propId,grupo._id,i.nome_produto),
+      obs:i.formula_custo||'',
       insumos:itens.filter(it=>it._id!==i._id&&it.nome_produto&&it.quantidade>0),
     }));
   }
@@ -1088,6 +1154,7 @@ function getProdutosDoGrupo(grupo,propId){
   return [{
     nome:grupo.nome,
     key:prodKey(propId,grupo._id,grupo.nome),
+    obs:(itens.find(i=>i.descricao_utilizacao==='Produto Acabado')?.formula_custo)||'',
     insumos:itens.filter(i=>i.nome_produto&&i.quantidade>0),
   }];
 }
@@ -1137,7 +1204,6 @@ function openProj(proj){
     const done=prods.filter(p=>pState[p.key]?.state==='done').length;
     const pct=prods.length?Math.round(done/prods.length*100):0;
     return`<div class="grupo-card" onclick="openGrupo('${g._id}')">
-      <div class="grupo-ico">${grupoIco(g.nome)}</div>
       <div class="grupo-info">
         <div class="grupo-nome">${g.nome}</div>
         <div class="grupo-amb">${g.ambiente||'Sem ambiente'}</div>
@@ -1149,6 +1215,26 @@ function openProj(proj){
       <div class="arrow-btn">›</div>
     </div>`;
   }).join('')||'<div class="empty-state">Nenhum grupo</div>';
+
+  // Condições Gerais do pedido
+  const cg=cf.condicoesGerais?.trim();
+  const cgEl=document.getElementById('p2-cond-gerais');
+  if(cgEl){
+    if(cg){
+      cgEl.style.display='block';
+      cgEl.innerHTML=`
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden;margin-top:18px">
+          <div style="padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.cg-chev').textContent=this.nextElementSibling.style.display==='none'?'▼':'▲'">
+            <span style="font-size:12px;font-weight:700;color:var(--tx);text-transform:uppercase;letter-spacing:.06em">📋 Condições Gerais</span>
+            <span class="cg-chev" style="font-size:11px;color:var(--tx3)">▼</span>
+          </div>
+          <div style="display:none;padding:16px;font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line">${esc(cg)}</div>
+        </div>`;
+    } else {
+      cgEl.style.display='none';
+    }
+  }
+
   setBread([{label:'Pedidos',pg:'p1'},{label:`${proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||('#'+proj.numeroProposta)} — ${c}`,active:true}]);
   setTitle(c);showPage('p2');
 }
@@ -1180,7 +1266,6 @@ function openGrupo(grupoId){
     const doneCount=getEtapas(k).filter(x=>x.state==='done').length;
     const insCnt=prod.insumos?.length||0;
     return`<div class="prod-card${state==='running'?' st-running':state==='done'?' st-done':state==='paused'?' st-paused':''}" id="pr-${esc(k)}" onclick="openProdByKey('${escJs(k)}')">
-      <div class="prod-ico">${prodIco(prod.nome)}</div>
       <div class="grupo-info">
         <div class="grupo-nome">${esc(prod.nome)}</div>
         <div class="grupo-amb">${insCnt} insumo${insCnt!==1?'s':''}</div>
@@ -1507,30 +1592,47 @@ function renderP1(){
             } else {
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
               action='<div style="margin-top:8px">'
-                +'<button class="cbtn cbtn-start" style="font-size:11px;padding:5px 14px" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">→ Demandar</button>'
+                +'<button style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;letter-spacing:.02em;transition:background .15s" onmouseover="this.style.background=\'var(--green-600)\'" onmouseout="this.style.background=\'var(--accent)\'" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">Demandar</button>'
                 +'</div>';
             }
           }
 
-          rows+='<div style="border-top:1px solid var(--bd);padding:10px 14px;display:flex;align-items:flex-start;gap:10px;background:'+rb+';border-left:3px solid '+ra+'">'
-            +'<div style="flex:1;min-width:0">'
-            +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-            +'<span style="font-size:12px;font-weight:600;color:var(--tx)">'+esc(prod.nome)+'</span>'
-            +badge
+          rows+='<div style="border-top:1px solid var(--bd);background:'+rb+';border-left:3px solid '+ra+';padding:12px 16px 12px 14px">'
+            // linha principal: nome + badge + progresso
+            +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">'
+              +'<div style="flex:1;min-width:0">'
+                +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
+                  +'<span style="font-size:13px;font-weight:700;color:var(--tx);letter-spacing:-.01em">'+esc(prod.nome)+'</span>'
+                  +badge
+                +'</div>'
+                // ambiente como label discreto
+                +(grupo.ambiente
+                  ?'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">'+esc(grupo.ambiente)+'</div>'
+                  :'')
+                // info etapa atual
+                +(info?'<div style="font-size:11px;color:var(--tx3);line-height:1.4">'+esc(info)+'</div>':'')
+              +'</div>'
+              // progresso compacto
+              +'<div style="flex-shrink:0;text-align:right">'
+                +'<div style="font-size:11px;font-family:\'Inconsolata\',monospace;font-weight:600;color:var(--tx2);margin-bottom:4px">'+psd+' / '+prodStagesTotal+'</div>'
+                +'<div style="width:56px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-left:auto">'
+                  +'<div style="width:'+ppct+'%;height:100%;background:'+ra+';border-radius:2px"></div>'
+                +'</div>'
+              +'</div>'
             +'</div>'
-            +(info?'<div style="font-size:11px;color:var(--tx3);margin-top:3px">'+esc(info)+'</div>':'')
-            +action
-            +'</div>'
-            +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
-            +'<div style="display:flex;align-items:center;gap:4px">'
-            +'<div style="width:52px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden">'
-            +'<div style="width:'+ppct+'%;height:100%;background:'+ra+';border-radius:2px"></div>'
-            +'</div>'
-            +'<span style="font-size:9px;color:var(--tx3)">'+psd+'/'+prodStagesTotal+'</span>'
-            +'</div>'
-            +'<button class="cbtn" style="font-size:10px;padding:3px 8px;color:var(--tx2);border-color:var(--bd)" '
-            +'onclick="gestorAbrirProduto(\''+escJs(p.proj._id)+'\',\''+escJs(grupo._id)+'\',\''+escJs(prod.key)+'\')">Detalhes ›</button>'
-            +'<button title="Excluir produto" style="border:none;background:none;cursor:pointer;padding:4px 6px;color:var(--tx3);font-size:13px;border-radius:6px;transition:all .15s" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\'" onmouseout="this.style.background=\'none\';this.style.color=\'var(--tx3)\'" onclick="excluirProduto(\''+escJs(prod.key)+'\')">🗑</button>'
+            // rodapé: ação + botões de controle
+            +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">'
+              +'<div style="flex:1;min-width:0">'+action+'</div>'
+              +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+                +'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s;letter-spacing:.01em" '
+                  +'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" '
+                  +'onmouseout="this.style.borderColor=\'var(--bd)\';this.style.color=\'var(--tx2)\'" '
+                  +'onclick="gestorAbrirProduto(\''+escJs(p.proj._id)+'\',\''+escJs(grupo._id)+'\',\''+escJs(prod.key)+'\')">Ver detalhes</button>'
+                +'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 10px;border-radius:7px;border:1px solid var(--red-bd);background:transparent;color:var(--tx3);cursor:pointer;transition:all .15s" '
+                  +'onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\';this.style.borderColor=\'var(--red)\'" '
+                  +'onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--tx3)\';this.style.borderColor=\'var(--red-bd)\'" '
+                  +'onclick="excluirProduto(\''+escJs(prod.key)+'\')">Remover</button>'
+              +'</div>'
             +'</div>'
             +'</div>';
         });
@@ -1560,7 +1662,7 @@ function renderP1(){
         +'</div>':'')
       +'</div>'
       +'<div style="flex-shrink:0;color:var(--tx3);font-size:13px;width:18px;text-align:center">'+(isOpen?'▲':'▼')+'</div>'
-      +'<button onclick="event.stopPropagation();excluirPedido(\''+escJs(p.proj._id)+'\')" title="Excluir pedido" style="flex-shrink:0;border:none;background:none;cursor:pointer;padding:4px 6px;color:var(--tx3);font-size:14px;border-radius:6px;transition:all .15s" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\'" onmouseout="this.style.background=\'none\';this.style.color=\'var(--tx3)\'">🗑</button>'
+      +'<button onclick="event.stopPropagation();excluirPedido(\''+escJs(p.proj._id)+'\')" title="Remover pedido" style="flex-shrink:0;font-size:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;border:1px solid var(--red-bd);background:transparent;color:var(--tx3);cursor:pointer;padding:3px 8px;border-radius:6px;transition:all .15s;letter-spacing:.01em" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\';this.style.borderColor=\'var(--red)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--tx3)\';this.style.borderColor=\'var(--red-bd)\'">Remover</button>'
       +'</div>'
       +'</div>'
       +rows
