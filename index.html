@@ -508,7 +508,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
   </div>
 
   <div class="breadbar" id="breadbar">
-    <span class="bc-item active">Projetos</span>
+    <span class="bc-item active">Pedidos</span>
   </div>
 
   <div class="content">
@@ -517,7 +517,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     <div class="page active" id="p1">
       <div class="stats-row" id="p1-stats">
         <div class="stat-card stat-card-accent">
-          <div class="stat-label">Total de Projetos <div class="stat-icon" style="background:rgba(255,255,255,.15);color:#fff"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z"/></svg></div></div>
+          <div class="stat-label">Total de Pedidos <div class="stat-icon" style="background:rgba(255,255,255,.15);color:#fff"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm7 0h5v5H9V2zM2 9h5v5H2V9zm7 0h5v5H9V9z"/></svg></div></div>
           <div class="stat-val" id="st-total">—</div>
           <div class="stat-change" id="st-pag">Carregando…</div>
           <div class="stat-bg"></div>
@@ -539,7 +539,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
         </div>
       </div>
       <div class="section-hdr" id="p1-section-hdr">
-        <div><div class="section-title" id="p1-section-title">Todos os Projetos</div><div class="section-sub" id="p1-sub">Carregando…</div></div>
+        <div><div class="section-title" id="p1-section-title">Todos os Pedidos</div><div class="section-sub" id="p1-sub">Carregando…</div></div>
         <div id="p1-filter-bar" style="display:flex;gap:8px;align-items:center">
           <select id="f-resp" onchange="renderP1()" style="font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:7px 11px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Todos responsáveis</option></select>
           <select id="f-status" onchange="renderP1()" style="font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:7px 11px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">
@@ -549,7 +549,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
           </select>
         </div>
       </div>
-      <div id="p1-body"><div class="loading-state"><div class="spin"></div><br>Carregando projetos…</div></div>
+      <div id="p1-body"><div class="loading-state"><div class="spin"></div><br>Carregando pedidos…</div></div>
       <div class="pag" id="pag" style="display:none">
         <button class="pag-btn" id="pag-prev" onclick="changePage(-1)">← Anterior</button>
         <span class="pag-info" id="pag-info"></span>
@@ -1123,7 +1123,7 @@ function openProj(proj){
   const resp=cf.vendedorResponsavel||'—';
   const local=[cf.bairro,cf.cidade].filter(Boolean).join(', ');
   $('p2-hero').innerHTML=`
-    <div class="dh-over">Projeto #${proj.numeroProposta}</div>
+    <div class="dh-over">Pedido ${esc(proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'#'+proj.numeroProposta)}</div>
     <div class="dh-title">${c}</div>
     <div class="dh-meta">
       ${local?`<span>📍 ${local}</span>`:''}
@@ -1149,7 +1149,7 @@ function openProj(proj){
       <div class="arrow-btn">›</div>
     </div>`;
   }).join('')||'<div class="empty-state">Nenhum grupo</div>';
-  setBread([{label:'Projetos',pg:'p1'},{label:`#${proj.numeroProposta} — ${c}`,active:true}]);
+  setBread([{label:'Pedidos',pg:'p1'},{label:`${proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||('#'+proj.numeroProposta)} — ${c}`,active:true}]);
   setTitle(c);showPage('p2');
 }
 
@@ -1162,7 +1162,7 @@ function openGrupo(grupoId){
   const pct=prods.length?Math.round(done/prods.length*100):0;
   const c=curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—';
   $('p3-hero').innerHTML=`
-    <div class="dh-over">${c} · #${curProj.numeroProposta}</div>
+    <div class="dh-over">${c} · Pedido ${esc(curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta)}</div>
     <div class="dh-title">${grupo.nome}</div>
     <div class="dh-meta"><span>📍 ${grupo.ambiente||'—'}</span><span>${prods.length} produto${prods.length!==1?'s':''}</span></div>`;
   $('p3-prog-box').innerHTML=`
@@ -1190,7 +1190,7 @@ function openGrupo(grupoId){
       <div class="arrow-btn">›</div>
     </div>`;
   }).join('')||'<div class="empty-state">Nenhum produto</div>';
-  setBread([{label:'Projetos',pg:'p1'},{label:`#${curProj.numeroProposta}`,pg:'p2'},{label:grupo.nome,active:true}]);
+  setBread([{label:'Pedidos',pg:'p1'},{label:curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||('#'+curProj.numeroProposta),pg:'p2'},{label:grupo.nome,active:true}]);
   setTitle(grupo.nome);showPage('p3');
 }
 
@@ -1207,7 +1207,7 @@ function openProd(prod){
       <div class="ic-div"></div>
       <div class="ic-field"><div class="ic-label">Ambiente</div><div class="ic-value" style="font-size:13px">${esc(curGrupo.ambiente||'—')}</div></div>
       <div class="ic-div"></div>
-      <div class="ic-field"><div class="ic-label">Projeto</div><div class="ic-value" style="font-size:13px">#${esc(curProj.numeroProposta)} — ${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
+      <div class="ic-field"><div class="ic-label">Pedido</div><div class="ic-value" style="font-size:13px">${esc(curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta)} — ${esc(curProj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—')}</div></div>
     </div>`;
   const insumos=prod.insumos||[];
   $('insumos-count').textContent=insumos.length+' insumo'+(insumos.length!==1?'s':'');
@@ -1223,7 +1223,7 @@ function openProd(prod){
   :'<div class="hist-empty">Sem insumos</div>';
   renderEtapas();
   const label=prod.nome.slice(0,22)+(prod.nome.length>22?'…':'');
-  setBread([{label:'Projetos',pg:'p1'},{label:`#${curProj.numeroProposta}`,pg:'p2'},{label:curGrupo.nome,pg:'p3'},{label:label,active:true}]);
+  setBread([{label:'Pedidos',pg:'p1'},{label:curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||('#'+curProj.numeroProposta),pg:'p2'},{label:curGrupo.nome,pg:'p3'},{label:label,active:true}]);
   setTitle(prod.nome);showPage('p4');
 }
 
@@ -1264,7 +1264,7 @@ function loginAs(userId){
   if(nm)nm.textContent=currentUser.apelido||currentUser.nome.split(' ')[0];
   if(rl)rl.textContent=currentUser.cargo;
   if(currentUser.role==='operador')navToMinhasTarefas();
-  else{setBread([{label:'Projetos',active:true}]);setTitle('Dashboard');renderP1();showPage('p1');}
+  else{setBread([{label:'Pedidos',active:true}]);setTitle('Dashboard');renderP1();showPage('p1');}
 }
 function logout(){
   currentUser=null;_p5Raf=null;curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;
@@ -1317,7 +1317,7 @@ function renderMinhasTarefas(){
         <span class="badge ${stateCls}">${stateLbl}</span>
         <div class="arrow-btn">›</div>
       </div>
-      <div style="font-size:12px;color:var(--tx2);padding-left:20px">${t.prod.nome} · ${t.grupo.nome} · <strong>#${t.proj.numeroProposta}</strong> ${c}</div>
+      <div style="font-size:12px;color:var(--tx2);padding-left:20px">${t.prod.nome} · ${t.grupo.nome} · <strong>${t.proj.numeroPedido?.trim()||t.proj.camposFormulario?.numeroPedido?.trim()||('#'+t.proj.numeroProposta)}</strong> ${c}</div>
     </div>`;
   }).join('');
 }
@@ -1397,7 +1397,7 @@ function renderP1(){
     return{proj,pedNum,cliente,cidade,valPend,emAnd,totProds,prodsDone,concluido,prioridade};
   });
 
-  projs.sort((a,b)=>a.prioridade-b.prioridade||b.valPend-a.valPend||b.emAnd-a.emAnd);
+  projs.sort((a,b)=>Number(b.pedNum)-Number(a.pedNum));
 
   // ── Filtro de busca ──
   const q=_searchQuery;
@@ -1762,7 +1762,7 @@ function _refreshStats(){
   $('st-aprov').textContent=allData.filter(p=>p.statusOrcamento?.includes('Aprovado')).length;
   $('st-resps').textContent=new Set(allData.map(p=>p.camposFormulario?.vendedorResponsavel||'')).size;
   const loaded=allData.length,total=_totalPropostas||loaded;
-  $('st-pag').textContent=loaded<total?`${loaded} de ${total} carregando…`:`${loaded} projetos`;
+  $('st-pag').textContent=loaded<total?`${loaded} de ${total} carregando…`:`${loaded} pedidos`;
 }
 function _deferRender(){
   // Throttle renderP1 during background loading — no more than 1x per 800ms
