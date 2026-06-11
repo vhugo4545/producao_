@@ -1370,8 +1370,12 @@ function loginAs(userId){
   if(av)av.textContent=initials(currentUser.nome);
   if(nm)nm.textContent=currentUser.apelido||currentUser.nome.split(' ')[0];
   if(rl)rl.textContent=currentUser.cargo;
-  if(currentUser.role==='operador')navToMinhasTarefas();
-  else{
+  if(currentUser.role==='operador'){
+    setBread([{label:'Minhas Tarefas',active:true}]);setTitle('Minhas Tarefas');
+    showPage('p1');
+    if(allData.length===0){_showSkeleton(4);_setLoadBar(5);}
+    else renderMinhasTarefas();
+  } else {
     setBread([{label:'Pedidos',active:true}]);setTitle('Pedidos em Produção');
     showPage('p1');
     if(allData.length===0){_showSkeleton(7);_setLoadBar(5);}
@@ -1416,7 +1420,13 @@ function renderMinhasTarefas(){
   const tasks=getMinhasTarefas();
   if(sub)sub.textContent=tasks.length+' tarefa'+(tasks.length!==1?'s':'')+' atribuída'+(tasks.length!==1?'s':'')+' a você';
   const body=$('p1-body');
-  if(!tasks.length){body.innerHTML='<div class="empty-state">Nenhuma tarefa atribuída a você no momento</div>';return;}
+  if(!tasks.length){
+    const aindaCarregando=allData.length<(_totalPropostas||allData.length+1);
+    body.innerHTML=aindaCarregando
+      ?'<div style="display:flex;flex-direction:column;gap:0">'+Array(4).fill(_skeletonCard()).join('')+'</div>'
+      :'<div class="empty-state">Nenhuma tarefa atribuída a você no momento</div>';
+    return;
+  }
   body.innerHTML=tasks.map(t=>{
     const cfg=ETAPAS[t.etapaIdx];const s=t.etapaState.state;
     const stateLbl=s==='active'?'Em andamento':s==='paused'?'Pausada':'Aguardando início';
@@ -2126,9 +2136,12 @@ function _refreshStats(){
   if(total>0)_setLoadBar(Math.round(loaded/total*100));
 }
 function _deferRender(){
-  // Throttle renderP1 during background loading — no more than 1x per 800ms
   clearTimeout(_renderTimer);
-  _renderTimer=setTimeout(()=>{if(currentUser)renderP1();},800);
+  _renderTimer=setTimeout(()=>{
+    if(!currentUser)return;
+    if(currentUser.role==='operador')renderMinhasTarefas();
+    else renderP1();
+  },800);
 }
 
 async function fetchPagina(pg,limit=100){
