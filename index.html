@@ -1994,12 +1994,17 @@ function renderP4Right(panelId){
   const cf=curProj.camposFormulario||{};
   const pedNum=curProj.numeroPedido?.trim()||cf.numeroPedido?.trim()||'#'+curProj.numeroProposta;
   const cliente=cf.clientes?.[0]?.nome_razao_social||'—';
-  const obraFields=[
-    {label:'Rua',val:cf.ruaObra?.trim()||'—'},{label:'Número',val:cf.numeroObra?.trim()||'—'},
-    {label:'Complemento',val:cf.complementoObra?.trim()||'—'},{label:'Bairro',val:cf.bairroObra?.trim()||'—'},
-    {label:'Cidade',val:cf.cidadeObra?.trim()||'—'},{label:'Estado',val:cf.estadoObra?.trim()||'—'},
-    {label:'CEP',val:cf.cepObra?.trim()||'—'},
+  // Endereço principal (campos sem sufixo Obra)
+  const endFields=[
+    {label:'Rua',val:(cf.rua?.trim()||cf.ruaObra?.trim()||'—')},
+    {label:'Número',val:(cf.numero?.trim()||cf.numeroObra?.trim()||'—')},
+    {label:'Complemento',val:(cf.complemento?.trim()||cf.complementoObra?.trim()||'—')},
+    {label:'Bairro',val:(cf.bairro?.trim()||cf.bairroObra?.trim()||'—')},
+    {label:'Cidade',val:(cf.cidade?.trim()||cf.cidadeObra?.trim()||'—')},
+    {label:'Estado',val:(cf.estado?.trim()||cf.estadoObra?.trim()||'—')},
+    {label:'CEP',val:(cf.cep?.trim()||cf.cepObra?.trim()||'—')},
   ];
+  const obraFields=endFields; // alias
   // card Produto
   const prodCampos=[
     {label:'Produto',val:esc(curProd.nome),size:13},
