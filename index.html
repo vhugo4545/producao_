@@ -2693,39 +2693,51 @@ function renderQuadroTimers(){
   });
 }
 
+function _render(){if(!currentUser)return;currentUser.role==='operador'?renderMinhasTarefas():renderP1();}
+
 async function init(){
   renderLogin();
   _carregarHidden();
 
-  // ── FASE 1: cache instantâneo ──────────────────────────────
-  const cached=_loadCache();
-  if(cached){
-    allData=cached;
-    // estados de produção (do nosso servidor — rápido)
-    await loadProducaoStates();
-    if(currentUser){
-      currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+  // ── FASE 1: cache do NOSSO servidor (instantâneo ~200ms) ───
+  let serverCache=null;
+  try{
+    const r=await fetch(PROD_API+'/api/proposals-cache');
+    if(r.ok){
+      serverCache=await r.json();
+      if(serverCache?.length>0){
+        allData=serverCache;
+        await loadProducaoStates();
+        _render();
+        console.log('[cache] servidor: '+serverCache.length+' propostas carregadas');
+      }
+    }
+  }catch(_){}
+
+  // Fallback: cache localStorage se servidor falhou
+  if(!serverCache?.length){
+    const lc=_loadCache();
+    if(lc){
+      allData=lc;
+      await loadProducaoStates();
+      _render();
+      console.log('[cache] local: '+lc.length+' propostas carregadas');
     }
   }
 
-  // ── FASE 2: revalida em background ─────────────────────────
+  // ── FASE 2: revalida da API externa em background ──────────
   try{
     const j=await fetchPagina(1,100);
-    const fresh=j.propostas||[];
-    _totalPropostas=j.total||fresh.length;
+    _totalPropostas=j.total||0;
     _totalPags=j.totalPaginas||1;
 
-    // Mescla: mantém os dados do cache + adiciona novos da API
     const byId=new Map(allData.map(p=>[p._id,p]));
-    fresh.forEach(p=>byId.set(p._id,p));
+    (j.propostas||[]).forEach(p=>byId.set(p._id,p));
     allData=[...byId.values()];
 
-    _refreshStats();
-    if(!cached){
+    if(!serverCache?.length){
       await loadProducaoStates();
-      if(currentUser){
-        currentUser.role==='operador'?renderMinhasTarefas():renderP1();
-      }
+      _render();
     } else {
       _deferRender();
     }
@@ -2741,13 +2753,23 @@ async function init(){
         _deferRender();
       }catch(_){break;}
     }
-    // Salva cache com dados completos para próxima sessão
-    _saveCache();
-    if(currentUser){
-      currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+
+    // ── FASE 3: salva no servidor E no localStorage ─────────
+    _render();
+    _saveCache(); // localStorage
+    const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
+    if(ativas.length>0){
+      // Envia em lotes de 50 para não exceder o limite de payload
+      for(let i=0;i<ativas.length;i+=50){
+        fetch(PROD_API+'/api/proposals-cache/sync',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({proposals:ativas.slice(i,i+50)})
+        }).catch(()=>{});
+      }
+      console.log('[cache] servidor atualizado: '+ativas.length+' propostas');
     }
   }catch(e){
-    if(!cached)
+    if(!serverCache?.length&&!_loadCache())
       $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
   }
 }

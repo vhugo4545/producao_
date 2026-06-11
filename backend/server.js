@@ -45,6 +45,18 @@ const producaoSchema = new mongoose.Schema({
 
 const Producao = mongoose.model('Producao', producaoSchema);
 
+// ── Schema ProposalCache ─────────────────────────────────────
+// Armazena snapshot das propostas ativas (com numeroPedido)
+// TTL de 2h — Mongo apaga automaticamente após esse tempo
+const proposalCacheSchema = new mongoose.Schema({
+  proposalId:   { type: String, required: true, unique: true, maxlength: 64 },
+  numeroPedido: { type: String, maxlength: 64, default: '' },
+  data:         { type: mongoose.Schema.Types.Mixed, required: true },
+  syncedAt:     { type: Date, default: Date.now },
+}, { timestamps: true });
+proposalCacheSchema.index({ syncedAt: 1 }, { expireAfterSeconds: 7200 }); // TTL 2h
+const ProposalCache = mongoose.model('ProposalCache', proposalCacheSchema);
+
 // ── Schema FilaProducao ──────────────────────────────────────
 const filaProducaoSchema = new mongoose.Schema({
   lead_id:          { type: Number, required: true, unique: true },
@@ -280,6 +292,72 @@ app.delete('/api/hidden', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[DELETE /api/hidden]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── Rotas ProposalCache ──────────────────────────────────────
+
+// GET /api/proposals-cache
+// Retorna todas as propostas ativas cacheadas no nosso MongoDB
+app.get('/api/proposals-cache', async (_req, res) => {
+  try {
+    const docs = await ProposalCache.find({}, 'data -_id').lean();
+    res.json(docs.map(d => d.data));
+  } catch (err) {
+    console.error('[GET /api/proposals-cache]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// POST /api/proposals-cache/sync
+// Recebe lote de propostas do frontend e salva no cache
+// Aceita até 500kb para comportar ~200 propostas
+app.post('/api/proposals-cache/sync', express.json({ limit: '500kb' }), async (req, res) => {
+  const proposals = req.body?.proposals;
+  if (!Array.isArray(proposals) || proposals.length === 0)
+    return res.status(400).json({ error: 'Array de propostas obrigatório' });
+
+  try {
+    const ops = proposals.map(p => ({
+      updateOne: {
+        filter: { proposalId: String(p._id).slice(0, 64) },
+        update: {
+          $set: {
+            proposalId:   String(p._id).slice(0, 64),
+            numeroPedido: (p.numeroPedido || p.camposFormulario?.numeroPedido || '').toString().slice(0, 64),
+            data:         p,
+            syncedAt:     new Date(),
+          }
+        },
+        upsert: true,
+      }
+    }));
+    await ProposalCache.bulkWrite(ops, { ordered: false });
+    res.json({ ok: true, synced: proposals.length });
+  } catch (err) {
+    console.error('[POST /api/proposals-cache/sync]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// GET /api/user-context/:userId
+// Retorna os proposalIds onde este usuário tem etapas atribuídas
+// Permite que o frontend busque prioritariamente as propostas certas
+app.get('/api/user-context/:userId', async (req, res) => {
+  const userId = req.params.userId?.slice(0, 64);
+  if (!userId) return res.status(400).json({ error: 'userId obrigatório' });
+  try {
+    // Busca todos os docs de producao onde alguma etapa está atribuída a este usuário
+    const docs = await Producao.find(
+      { 'etapas.assignedTo': userId },
+      'key -_id'
+    ).lean();
+    // Extrai proposalIds únicos do campo key (formato: proposalId__grupoId__prodNome)
+    const proposalIds = [...new Set(docs.map(d => d.key.split('__')[0]).filter(Boolean))];
+    res.json({ userId, proposalIds });
+  } catch (err) {
+    console.error('[GET /api/user-context]', err.message);
     res.status(500).json({ error: 'Erro interno' });
   }
 });
