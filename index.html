@@ -260,6 +260,19 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
 
+/* SKELETON / SHIMMER */
+@keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+.sk{background:linear-gradient(90deg,var(--bg3) 25%,var(--bd) 50%,var(--bg3) 75%);background-size:600px 100%;animation:shimmer 1.4s infinite linear;border-radius:6px}
+.sk-card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow);margin-bottom:8px}
+.sk-num{display:flex;flex-direction:column;gap:6px;min-width:56px}
+.sk-line{height:10px}
+.sk-sep{width:1px;height:36px;background:var(--bd);flex-shrink:0}
+.sk-main{flex:1;display:flex;flex-direction:column;gap:8px}
+/* BARRA DE PROGRESSO TOPO */
+.load-bar-wrap{height:3px;background:var(--bg3);position:sticky;top:0;z-index:60;overflow:hidden;border-radius:0}
+.load-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease}
+@keyframes load-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* SANFONA */
 .sf-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
 .sf-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;transition:background .15s;gap:10px}
@@ -595,6 +608,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
           </select>
         </div>
       </div>
+      <div class="load-bar-wrap" id="p1-load-bar-wrap" style="display:none"><div class="load-bar-fill" id="p1-load-bar" style="width:0%"></div></div>
       <div id="p1-body"><div class="loading-state"><div class="spin"></div><br>Carregando pedidos…</div></div>
       <div class="pag" id="pag" style="display:none">
         <button class="pag-btn" id="pag-prev" onclick="changePage(-1)">← Anterior</button>
@@ -1325,6 +1339,28 @@ function renderLogin(){
       </div>
     </div>`).join('');
 }
+function _skeletonCard(){
+  return`<div class="sk-card">
+    <div class="sk-num"><div class="sk sk-line" style="width:48px;height:14px"></div><div class="sk sk-line" style="width:32px;height:8px;margin-top:4px"></div></div>
+    <div class="sk-sep"></div>
+    <div class="sk-main"><div class="sk sk-line" style="width:60%;height:13px"></div><div class="sk sk-line" style="width:35%;height:9px"></div></div>
+    <div class="sk sk-line" style="width:80px;height:22px;border-radius:20px"></div>
+    <div class="sk sk-line" style="width:60px;height:9px"></div>
+  </div>`;
+}
+
+function _showSkeleton(n=6){
+  const body=$('p1-body');if(!body)return;
+  body.innerHTML='<div style="display:flex;flex-direction:column;gap:0">'+Array(n).fill(_skeletonCard()).join('')+'</div>';
+}
+
+function _setLoadBar(pct){
+  const wrap=$('p1-load-bar-wrap'),bar=$('p1-load-bar');
+  if(!wrap||!bar)return;
+  if(pct>=100){wrap.style.display='none';bar.style.width='100%';return;}
+  wrap.style.display='block';bar.style.width=pct+'%';
+}
+
 function loginAs(userId){
   currentUser=USUARIOS.find(u=>u.id===userId);if(!currentUser)return;
   $('p0-screen').style.display='none';
@@ -1335,7 +1371,12 @@ function loginAs(userId){
   if(nm)nm.textContent=currentUser.apelido||currentUser.nome.split(' ')[0];
   if(rl)rl.textContent=currentUser.cargo;
   if(currentUser.role==='operador')navToMinhasTarefas();
-  else{setBread([{label:'Pedidos',active:true}]);setTitle('Dashboard');renderP1();showPage('p1');}
+  else{
+    setBread([{label:'Pedidos',active:true}]);setTitle('Pedidos em Produção');
+    showPage('p1');
+    if(allData.length===0){_showSkeleton(7);_setLoadBar(5);}
+    else renderP1();
+  }
 }
 function logout(){
   currentUser=null;_p5Raf=null;curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;
@@ -2073,6 +2114,8 @@ function _refreshStats(){
   $('st-resps').textContent=new Set(allData.map(p=>p.camposFormulario?.vendedorResponsavel||'')).size;
   const loaded=allData.length,total=_totalPropostas||loaded;
   $('st-pag').textContent=loaded<total?`${loaded} de ${total} carregando…`:`${loaded} pedidos`;
+  // atualiza barra de progresso
+  if(total>0)_setLoadBar(Math.round(loaded/total*100));
 }
 function _deferRender(){
   // Throttle renderP1 during background loading — no more than 1x per 800ms
@@ -2628,8 +2671,13 @@ async function init(){
     const sel=$('f-resp');
     [...resps].filter(Boolean).sort().forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o)});
     _refreshStats();
+    // mostra skeleton enquanto carrega estados
+    if(currentUser&&$('p1-body')?.querySelector('.sk-card')===null){
+      _showSkeleton(7);
+    }
     // Carrega estados de produção do backend (não bloqueia se offline)
     await loadProducaoStates();
+    _setLoadBar(Math.round(allData.length/(_totalPropostas||allData.length)*100));
     if(currentUser)renderP1();
 
     // Restante em background — atualiza painel a cada página nova
