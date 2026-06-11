@@ -765,6 +765,21 @@ const TOTAL_PROD=ETAPAS_PROD.length;
 let allData=[],curPage=1,totPages=1;
 // seleção em lote persistida entre re-renders
 const _selectedKeys=new Set();
+
+// ── CACHE DE PROPOSTAS ATIVAS ─────────────────────────────────
+const _CACHE_KEY='ulhoa_proposals_v2';
+const _CACHE_TTL=30*60*1000; // 30 minutos
+function _saveCache(){
+  const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
+  if(ativas.length>0)localStorage.setItem(_CACHE_KEY,JSON.stringify({ts:Date.now(),data:ativas}));
+}
+function _loadCache(){
+  try{
+    const c=JSON.parse(localStorage.getItem(_CACHE_KEY)||'null');
+    if(c&&Date.now()-c.ts<_CACHE_TTL&&c.data?.length>0)return c.data;
+  }catch(_){}
+  return null;
+}
 // IDs/keys ocultos (soft-delete) — localStorage como cache, servidor como fonte permanente
 const _hiddenPedidos=new Set(JSON.parse(localStorage.getItem('hidden_pedidos')||'[]'));
 const _hiddenProdutos=new Set(JSON.parse(localStorage.getItem('hidden_produtos')||'[]'));
@@ -2680,40 +2695,60 @@ function renderQuadroTimers(){
 
 async function init(){
   renderLogin();
-  _carregarHidden(); // carrega itens ocultos do servidor em background
-  try{
-    // Página 1 imediata — usuário vê dados em ~1s
-    const j=await fetchPagina(1,100);
-    allData=j.propostas||[];
-    _totalPropostas=j.total||allData.length;
-    _totalPags=j.totalPaginas||1;
-    // Popula filtro de responsáveis
-    const resps=new Set(allData.map(p=>p.camposFormulario?.vendedorResponsavel||''));
-    const sel=$('f-resp');
-    [...resps].filter(Boolean).sort().forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o)});
-    _refreshStats();
-    // mostra skeleton enquanto carrega estados
-    if(currentUser&&$('p1-body')?.querySelector('.sk-card')===null){
-      _showSkeleton(7);
-    }
-    // Carrega estados de produção do backend (não bloqueia se offline)
-    await loadProducaoStates();
-    _setLoadBar(Math.round(allData.length/(_totalPropostas||allData.length)*100));
-    if(currentUser)renderP1();
+  _carregarHidden();
 
-    // Restante em background — atualiza painel a cada página nova
+  // ── FASE 1: cache instantâneo ──────────────────────────────
+  const cached=_loadCache();
+  if(cached){
+    allData=cached;
+    // estados de produção (do nosso servidor — rápido)
+    await loadProducaoStates();
+    if(currentUser){
+      currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+    }
+  }
+
+  // ── FASE 2: revalida em background ─────────────────────────
+  try{
+    const j=await fetchPagina(1,100);
+    const fresh=j.propostas||[];
+    _totalPropostas=j.total||fresh.length;
+    _totalPags=j.totalPaginas||1;
+
+    // Mescla: mantém os dados do cache + adiciona novos da API
+    const byId=new Map(allData.map(p=>[p._id,p]));
+    fresh.forEach(p=>byId.set(p._id,p));
+    allData=[...byId.values()];
+
+    _refreshStats();
+    if(!cached){
+      await loadProducaoStates();
+      if(currentUser){
+        currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+      }
+    } else {
+      _deferRender();
+    }
+
+    // Demais páginas em background
     for(let p=2;p<=_totalPags;p++){
       try{
         const jj=await fetchPagina(p,100);
-        allData=allData.concat(jj.propostas||[]);
+        const byId2=new Map(allData.map(x=>[x._id,x]));
+        (jj.propostas||[]).forEach(x=>byId2.set(x._id,x));
+        allData=[...byId2.values()];
         _refreshStats();
         _deferRender();
       }catch(_){break;}
     }
-    // Garante render final com dados completos
-    if(currentUser)renderP1();
+    // Salva cache com dados completos para próxima sessão
+    _saveCache();
+    if(currentUser){
+      currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+    }
   }catch(e){
-    $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+    if(!cached)
+      $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
   }
 }
 init();
