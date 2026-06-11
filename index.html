@@ -1531,9 +1531,12 @@ function renderP1(){
   </div></div>`;
 
   if(!filtered.length){
+    const aindaCarregando=!q&&allData.length<(_totalPropostas||allData.length+1);
     $('p1-body').innerHTML=searchBar+(q
       ?`<div class="empty-state">Nenhum resultado para "<b>${esc(q)}</b>"</div>`
-      :`<div class="empty-state">Nenhum pedido em produção ainda<br><span style="font-size:12px;color:var(--tx3)">Os dados estão carregando…</span></div>`
+      :aindaCarregando
+        ?'<div style="display:flex;flex-direction:column;gap:0">'+Array(6).fill(_skeletonCard()).join('')+'</div>'
+        :`<div class="empty-state">Nenhum pedido em produção</div>`
     );
     if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
     return;
