@@ -1577,10 +1577,7 @@ function renderP1(){
               }
             } else {
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
-              action='<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
-                +'<input type="checkbox" class="bulk-chk" data-key="'+escJs(prod.key)+'" data-pid="'+escJs(p.proj._id)+'"'+(_selectedKeys.has(prod.key)?' checked':'')+' onchange="_onBulkChk(\''+escJs(prod.key)+'\',\''+escJs(p.proj._id)+'\',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">'
-                +'<button style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;letter-spacing:.02em;transition:background .15s" onmouseover="this.style.background=\'var(--green-600)\'" onmouseout="this.style.background=\'var(--accent)\'" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">Demandar</button>'
-                +'</div>';
+              action='<button style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;letter-spacing:.02em;transition:background .15s" onmouseover="this.style.background=\'var(--green-600)\'" onmouseout="this.style.background=\'var(--accent)\'" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">Demandar</button>';
             }
           }
 
@@ -1607,9 +1604,12 @@ function renderP1(){
                 +'</div>'
               +'</div>'
             +'</div>'
-            // rodapé: ação + botões de controle
+            // rodapé: checkbox + ação + botões de controle
             +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">'
-              +'<div style="flex:1;min-width:0">'+action+'</div>'
+              +'<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">'
+                +'<input type="checkbox" class="bulk-chk" data-key="'+escJs(prod.key)+'" data-pid="'+escJs(p.proj._id)+'"'+(_selectedKeys.has(prod.key)?' checked':'')+' onchange="_onBulkChk(\''+escJs(prod.key)+'\',\''+escJs(p.proj._id)+'\',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">'
+                +'<div>'+action+'</div>'
+              +'</div>'
               +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
                 +'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);cursor:pointer;transition:all .15s;letter-spacing:.01em" '
                   +'onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" '
