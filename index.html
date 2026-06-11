@@ -1584,7 +1584,7 @@ function renderP1(){
             }
           }
 
-          rows+='<div style="border-top:1px solid var(--bd);background:'+rb+';border-left:3px solid '+ra+';padding:12px 16px 12px 14px">'
+          rows+='<div onclick="event.stopPropagation()" style="border-top:1px solid var(--bd);background:'+rb+';border-left:3px solid '+ra+';padding:12px 16px 12px 14px">'
             // linha principal: nome + badge + progresso
             +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">'
               +'<div style="flex:1;min-width:0">'
@@ -1630,7 +1630,7 @@ function renderP1(){
     }
     // barra de seleção coletiva (só aparece quando há checkboxes marcados)
     const bulkBar=isOpen
-      ?'<div id="bulk-bar-'+p.proj._id+'" style="display:none;border-top:2px solid var(--accent);background:var(--accent-light);padding:10px 16px;display:none;align-items:center;gap:10px;flex-wrap:wrap">'
+      ?'<div id="bulk-bar-'+p.proj._id+'" onclick="event.stopPropagation()" style="display:none;border-top:2px solid var(--accent);background:var(--accent-light);padding:10px 16px;display:none;align-items:center;gap:10px;flex-wrap:wrap">'
         +'<span id="bulk-count-'+p.proj._id+'" style="font-size:12px;font-weight:700;color:var(--accent)">0 selecionados</span>'
         +'<button onclick="_selecionarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer">Selecionar todos</button>'
         +'<button onclick="_desmarcarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer">Desmarcar</button>'
