@@ -749,6 +749,8 @@ const ETAPAS=ETAPAS_PROD.flatMap((e,i)=>[
 const TOTAL_PROD=ETAPAS_PROD.length;
 
 let allData=[],curPage=1,totPages=1;
+// seleção em lote persistida entre re-renders
+const _selectedKeys=new Set();
 // IDs/keys ocultos (soft-delete) — localStorage como cache, servidor como fonte permanente
 const _hiddenPedidos=new Set(JSON.parse(localStorage.getItem('hidden_pedidos')||'[]'));
 const _hiddenProdutos=new Set(JSON.parse(localStorage.getItem('hidden_produtos')||'[]'));
@@ -1575,7 +1577,8 @@ function renderP1(){
               }
             } else {
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
-              action='<div style="margin-top:8px">'
+              action='<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
+                +'<input type="checkbox" class="bulk-chk" data-key="'+escJs(prod.key)+'" data-pid="'+escJs(p.proj._id)+'"'+(_selectedKeys.has(prod.key)?' checked':'')+' onchange="_onBulkChk(\''+escJs(prod.key)+'\',\''+escJs(p.proj._id)+'\',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">'
                 +'<button style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;letter-spacing:.02em;transition:background .15s" onmouseover="this.style.background=\'var(--green-600)\'" onmouseout="this.style.background=\'var(--accent)\'" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">Demandar</button>'
                 +'</div>';
             }
@@ -1622,6 +1625,25 @@ function renderP1(){
         });
       });
     }
+    // barra de seleção coletiva (só aparece quando há checkboxes marcados)
+    const bulkBar=isOpen
+      ?'<div id="bulk-bar-'+p.proj._id+'" style="display:none;border-top:2px solid var(--accent);background:var(--accent-light);padding:10px 16px;display:none;align-items:center;gap:10px;flex-wrap:wrap">'
+        +'<span id="bulk-count-'+p.proj._id+'" style="font-size:12px;font-weight:700;color:var(--accent)">0 selecionados</span>'
+        +'<button onclick="_selecionarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer">Selecionar todos</button>'
+        +'<button onclick="_desmarcarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer">Desmarcar</button>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">'
+          +'<select id="bulk-et-'+p.proj._id+'" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">'
+            +ETAPAS.map((e,i)=>e.tipo==='producao'&&i>=2?`<option value="${i}"${i===2?' selected':''}>${esc(e.nome)}</option>`:'').join('')
+          +'</select>'
+          +'<select id="bulk-op-'+p.proj._id+'" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">'
+            +'<option value="">Operador…</option>'
+            +USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('')
+          +'</select>'
+          +'<button onclick="_demandarSelecionados(\''+escJs(p.proj._id)+'\')" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap">Demandar selecionados</button>'
+        +'</div>'
+      +'</div>'
+      :''
+    ;
 
     return'<div style="border-radius:12px;overflow:hidden;border:1px solid '+(isOpen?accent:'var(--bd)')+';box-shadow:var(--shadow)">'
       +'<div style="display:flex;align-items:stretch;cursor:pointer;background:var(--bg2)" onclick="togglePedido(\''+p.proj._id+'\')">'
@@ -1650,6 +1672,7 @@ function renderP1(){
       +'</div>'
       +'</div>'
       +rows
+      +bulkBar
       +'</div>';
   });
 
@@ -1659,6 +1682,11 @@ function renderP1(){
   $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>';
   // Mantém foco e cursor no campo de busca após re-render
   if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+  // Restaura barras de seleção para pedidos com keys selecionadas
+  if(_selectedKeys.size>0){
+    const pids=new Set([...document.querySelectorAll('.bulk-chk:checked')].map(c=>c.dataset.pid));
+    pids.forEach(pid=>_updateBulkBar(pid));
+  }
 }
 function gestorValidarInline(key,etapaIdx,selId){
   const opId=$(selId)?.value;
@@ -1804,6 +1832,58 @@ function _confirmarDemandar(){
   pState[key].state=derivedState(key);
   saveProducaoState(key,0);
   fecharModalDemandar();
+  renderP1();
+}
+
+// ── DEMANDA EM LOTE ──────────────────────────────────────────
+function _onBulkChk(key,projId,checked){
+  if(checked)_selectedKeys.add(key);else _selectedKeys.delete(key);
+  _updateBulkBar(projId);
+}
+function _updateBulkBar(projId){
+  const bar=document.getElementById('bulk-bar-'+projId);
+  const cnt=document.getElementById('bulk-count-'+projId);
+  if(!bar)return;
+  // conta keys selecionadas que pertencem a este pedido
+  const chks=[...document.querySelectorAll(`.bulk-chk[data-pid="${projId}"]`)];
+  const selCount=chks.filter(c=>_selectedKeys.has(c.dataset.key)).length;
+  bar.style.display=selCount>0?'flex':'none';
+  if(cnt)cnt.textContent=selCount+' selecionado'+(selCount!==1?'s':'');
+}
+function _selecionarTodos(projId){
+  document.querySelectorAll(`.bulk-chk[data-pid="${projId}"]`).forEach(c=>{
+    _selectedKeys.add(c.dataset.key);c.checked=true;
+  });
+  _updateBulkBar(projId);
+}
+function _desmarcarTodos(projId){
+  document.querySelectorAll(`.bulk-chk[data-pid="${projId}"]`).forEach(c=>{
+    _selectedKeys.delete(c.dataset.key);c.checked=false;
+  });
+  _updateBulkBar(projId);
+}
+function _demandarSelecionados(projId){
+  const opId=document.getElementById('bulk-op-'+projId)?.value;
+  if(!opId){toast('Selecione um operador');return;}
+  const etIdx=parseInt(document.getElementById('bulk-et-'+projId)?.value||'2')||2;
+  const chks=[...document.querySelectorAll(`.bulk-chk[data-pid="${projId}"]:checked`)];
+  if(!chks.length){toast('Nenhum produto selecionado');return;}
+  const now=Date.now();
+  chks.forEach(chk=>{
+    const key=chk.dataset.key;
+    const etapas=getEtapas(key);
+    etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
+    etapas[0].firstStartAt=now;etapas[0].startAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
+    etapas[1].state='done';etapas[1].endAt=now;
+    if(etapas[etIdx])etapas[etIdx].assignedTo=opId;
+    if(!pState[key])pState[key]={state:'idle'};
+    pState[key].state=derivedState(key);
+    saveProducaoState(key,0);
+  });
+  const op=USUARIOS.find(u=>u.id===opId);
+  // limpa seleção após demandar
+  chks.forEach(c=>_selectedKeys.delete(c.dataset.key));
+  toast('Demandado ✓ — '+chks.length+' produto'+(chks.length!==1?'s':'')+' → '+(op?.nome.split(' ')[0]||opId));
   renderP1();
 }
 
