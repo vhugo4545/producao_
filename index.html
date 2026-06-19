@@ -1635,7 +1635,7 @@ function renderP1(){
             +'<div style="width:48px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden">'
               +'<div style="width:'+areaPct+'%;height:100%;background:'+(areaPct===100?'#16a34a':'var(--accent)')+';border-radius:2px"></div>'
             +'</div>'
-            +'<button onclick="event.stopPropagation();_selecionarAreaTodos(\''+escJs(areaKey)+'\',\''+escJs(p.proj._id)+'\')" style="font-size:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:3px 9px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;white-space:nowrap">Sel. todos</button>'
+            +'<input type="checkbox" id="'+_areaChkId(areaKey)+'" onclick="event.stopPropagation();_toggleAreaChk(\''+escJs(areaKey)+'\',\''+escJs(p.proj._id)+'\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">'
           +'</div>'
         +'</div>';
 
@@ -1794,6 +1794,15 @@ function renderP1(){
   $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>';
   // Mantém foco e cursor no campo de busca após re-render
   if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+  // Inicializa estado indeterminate dos checkboxes de área (não pode ser feito via atributo HTML)
+  Object.keys(_areaProdKeys).forEach(areaKey=>{
+    const chk=document.getElementById(_areaChkId(areaKey));
+    if(!chk)return;
+    const keys=_areaProdKeys[areaKey]||[];
+    const n=keys.filter(k=>_selectedKeys.has(k)).length;
+    chk.checked=n===keys.length&&keys.length>0;
+    chk.indeterminate=n>0&&n<keys.length;
+  });
   // Restaura barras de seleção para pedidos com keys selecionadas
   if(_selectedKeys.size>0){
     const pids=new Set([...document.querySelectorAll('.bulk-chk:checked')].map(c=>c.dataset.pid));
@@ -1982,24 +1991,37 @@ function _toggleArea(areaKey){
   renderP1();
 }
 function _areaIndId(areaKey){return'area-ind-'+areaKey.replace(/[^a-zA-Z0-9]/g,'_');}
+function _areaChkId(areaKey){return'area-chk-'+areaKey.replace(/[^a-zA-Z0-9]/g,'_');}
 function _updateAreaSelInd(areaKey){
-  const el=document.getElementById(_areaIndId(areaKey));
-  if(!el)return;
+  const ind=document.getElementById(_areaIndId(areaKey));
+  const chk=document.getElementById(_areaChkId(areaKey));
   const keys=_areaProdKeys[areaKey]||[];
   const n=keys.filter(k=>_selectedKeys.has(k)).length;
   const total=keys.length;
-  if(n===0){el.style.display='none';el.innerHTML='';}
-  else if(n===total){
-    el.style.display='';
-    el.innerHTML='<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;white-space:nowrap">✓ todos</span>';
-  } else {
-    el.style.display='';
-    el.innerHTML='<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);white-space:nowrap">'+n+'/'+total+'</span>';
+  // atualiza checkbox da área
+  if(chk){chk.checked=n===total&&total>0;chk.indeterminate=n>0&&n<total;}
+  // atualiza badge de contagem
+  if(ind){
+    if(n===0){ind.style.display='none';ind.innerHTML='';}
+    else if(n===total){
+      ind.style.display='';
+      ind.innerHTML='<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;white-space:nowrap">✓ todos</span>';
+    } else {
+      ind.style.display='';
+      ind.innerHTML='<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);white-space:nowrap">'+n+'/'+total+'</span>';
+    }
   }
 }
-function _selecionarAreaTodos(areaKey,projId){
-  (_areaProdKeys[areaKey]||[]).forEach(k=>_selectedKeys.add(k));
-  document.querySelectorAll(`.bulk-chk[data-area="${CSS.escape(areaKey)}"]`).forEach(c=>c.checked=true);
+function _toggleAreaChk(areaKey,projId){
+  const keys=_areaProdKeys[areaKey]||[];
+  const allSel=keys.length>0&&keys.every(k=>_selectedKeys.has(k));
+  if(allSel){
+    keys.forEach(k=>_selectedKeys.delete(k));
+    document.querySelectorAll(`.bulk-chk[data-area="${CSS.escape(areaKey)}"]`).forEach(c=>c.checked=false);
+  } else {
+    keys.forEach(k=>_selectedKeys.add(k));
+    document.querySelectorAll(`.bulk-chk[data-area="${CSS.escape(areaKey)}"]`).forEach(c=>c.checked=true);
+  }
   _updateAreaSelInd(areaKey);
   _updateBulkBar(projId);
 }
