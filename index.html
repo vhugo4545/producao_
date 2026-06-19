@@ -765,6 +765,10 @@ const TOTAL_PROD=ETAPAS_PROD.length;
 let allData=[],curPage=1,totPages=1;
 // seleção em lote persistida entre re-renders
 const _selectedKeys=new Set();
+// áreas expandidas — por padrão fechadas; chave = projId+'||'+areaLabel
+const _expandedAreas=new Set();
+// mapa areaKey → [prodKeys] — populado no render para seleção funcionar mesmo com área fechada
+const _areaProdKeys={};
 
 // ── CACHE DE PROPOSTAS ATIVAS ─────────────────────────────────
 const _CACHE_KEY='ulhoa_proposals_v2';
@@ -1585,12 +1589,59 @@ function renderP1(){
     const accent=accentFor(p);
     const isOpen=_expandedProjId===p.proj._id;
 
-    // ── Accordion product rows ──
+    // ── Accordion product rows — agrupados por área ──
     let rows='';
     if(isOpen){
-      let ri=0;
+      // Agrupa produtos por área (grupo.ambiente ou grupo.nome como fallback)
+      const areaMap=new Map(); // areaLabel -> [{grupo, prod}]
       (p.proj.grupos||[]).forEach(grupo=>{
+        const area=grupo.ambiente||grupo.nome||'Sem área';
+        if(!areaMap.has(area))areaMap.set(area,[]);
         getProdutosDoGrupo(grupo,p.proj._id).filter(prod=>!_hiddenProdutos.has(prod.key)).forEach(prod=>{
+          areaMap.get(area).push({grupo,prod});
+        });
+      });
+
+      // popula mapa para seleção funcionar mesmo com área fechada
+      areaMap.forEach((items,areaLabel)=>{
+        const k=p.proj._id+'||'+areaLabel;
+        _areaProdKeys[k]=items.map(({prod})=>prod.key);
+      });
+
+      let ri=0;
+      areaMap.forEach((items,areaLabel)=>{
+        const areaKey=p.proj._id+'||'+areaLabel;
+        const isAreaOpen=_expandedAreas.has(areaKey);
+        const areaTotal=items.length;
+        const areaDone=items.filter(({prod})=>derivedState(prod.key)==='done').length;
+        const areaPct=areaTotal>0?Math.round(areaDone/areaTotal*100):0;
+
+        // Indicador de seleção para o cabeçalho (estado inicial)
+        const _selN=(_areaProdKeys[areaKey]||[]).filter(k=>_selectedKeys.has(k)).length;
+        const _indHtml=_selN===0?'':_selN===areaTotal
+          ?'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;white-space:nowrap">✓ todos</span>'
+          :'<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);white-space:nowrap">'+_selN+'/'+areaTotal+'</span>';
+
+        // Cabeçalho da área — clicável para abrir/fechar
+        rows+='<div onclick="event.stopPropagation();_toggleArea(\''+escJs(areaKey)+'\')" style="cursor:pointer;border-top:2px solid var(--bd);background:var(--bg2);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;user-select:none">'
+          +'<div style="display:flex;align-items:center;gap:8px">'
+            +'<span style="font-size:12px;color:var(--tx3)">'+(isAreaOpen?'▼':'▶')+'</span>'
+            +'<span style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;letter-spacing:.1em">'+esc(areaLabel)+'</span>'
+            +'<span style="font-size:10px;color:var(--tx3)">'+areaTotal+' produto'+(areaTotal!==1?'s':'')+'</span>'
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+            +'<div id="'+_areaIndId(areaKey)+'" style="display:'+(+_selN>0?'':'none')+'">'+_indHtml+'</div>'
+            +(areaPct===100?'<span style="font-size:10px;font-weight:700;color:#16a34a">✓ Concluído</span>':areaDone>0?'<span style="font-size:10px;color:var(--tx3)">'+areaDone+'/'+areaTotal+'</span>':'')
+            +'<div style="width:48px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden">'
+              +'<div style="width:'+areaPct+'%;height:100%;background:'+(areaPct===100?'#16a34a':'var(--accent)')+';border-radius:2px"></div>'
+            +'</div>'
+            +'<button onclick="event.stopPropagation();_selecionarAreaTodos(\''+escJs(areaKey)+'\',\''+escJs(p.proj._id)+'\')" style="font-size:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:3px 9px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;white-space:nowrap">Sel. todos</button>'
+          +'</div>'
+        +'</div>';
+
+        // Produtos da área — só renderiza se aberta
+        if(!isAreaOpen){ri+=items.length;return;}
+        items.forEach(({grupo,prod})=>{
           const etapas=getEtapas(prod.key);
           const state=derivedState(prod.key);
           const psd=etapas.filter((e,i)=>ETAPAS[i].tipo==='producao'&&e.state==='done').length;
@@ -1632,14 +1683,11 @@ function renderP1(){
           } else {
             const e0=etapas[0];
             if(e0.assignedTo){
-              // Encontra a próxima etapa pendente atribuída
               const nextIdx=etapas.findIndex((e,i)=>ETAPAS[i].tipo==='producao'&&e.state!=='done'&&e.assignedTo);
               const nextOp=nextIdx>=0?USUARIOS.find(u=>u.id===etapas[nextIdx].assignedTo):null;
               const nextNome=nextIdx>=0?ETAPAS[nextIdx].nome:'';
               badge='<span class="badge b-gray" style="font-size:10px">Demandado</span>';
               info=nextOp?(nextNome+' → '+nextOp.nome.split(' ')[0]):(ETAPAS[0].nome+' → '+(USUARIOS.find(u=>u.id===e0.assignedTo)?.nome.split(' ')[0]||e0.assignedTo));
-              const etapaSid=sid+'_rdet';
-              const etOpts2=ETAPAS.map((e,i)=>e.tipo==='producao'&&i>=2?`<option value="${i}">${esc(e.nome)}</option>`:'').join('');
               action='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px">'
                 +(nextIdx>=0
                   ?'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Redemandar para…</option>'+opOpts+'</select>'
@@ -1654,21 +1702,14 @@ function renderP1(){
           }
 
           rows+='<div onclick="event.stopPropagation()" style="border-top:1px solid var(--bd);background:'+rb+';border-left:3px solid '+ra+';padding:12px 16px 12px 14px">'
-            // linha principal: nome + badge + progresso
             +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">'
               +'<div style="flex:1;min-width:0">'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
                   +'<span style="font-size:13px;font-weight:700;color:var(--tx);letter-spacing:-.01em">'+esc(prod.nome)+'</span>'
                   +badge
                 +'</div>'
-                // ambiente como label discreto
-                +(grupo.ambiente
-                  ?'<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">'+esc(grupo.ambiente)+'</div>'
-                  :'')
-                // info etapa atual
                 +(info?'<div style="font-size:11px;color:var(--tx3);line-height:1.4">'+esc(info)+'</div>':'')
               +'</div>'
-              // progresso compacto
               +'<div style="flex-shrink:0;text-align:right">'
                 +'<div style="font-size:11px;font-family:\'Inconsolata\',monospace;font-weight:600;color:var(--tx2);margin-bottom:4px">'+psd+' / '+prodStagesTotal+'</div>'
                 +'<div style="width:56px;height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-left:auto">'
@@ -1676,10 +1717,9 @@ function renderP1(){
                 +'</div>'
               +'</div>'
             +'</div>'
-            // rodapé: checkbox + ação + botões de controle
             +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">'
               +'<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">'
-                +'<input type="checkbox" class="bulk-chk" data-key="'+escJs(prod.key)+'" data-pid="'+escJs(p.proj._id)+'"'+(_selectedKeys.has(prod.key)?' checked':'')+' onchange="_onBulkChk(\''+escJs(prod.key)+'\',\''+escJs(p.proj._id)+'\',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">'
+                +'<input type="checkbox" class="bulk-chk" data-key="'+escJs(prod.key)+'" data-pid="'+escJs(p.proj._id)+'" data-area="'+escJs(areaKey)+'"'+(_selectedKeys.has(prod.key)?' checked':'')+' onchange="_onBulkChk(\''+escJs(prod.key)+'\',\''+escJs(p.proj._id)+'\',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">'
                 +'<div>'+action+'</div>'
               +'</div>'
               +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
@@ -1910,6 +1950,8 @@ function _confirmarDemandar(){
 // ── DEMANDA EM LOTE ──────────────────────────────────────────
 function _onBulkChk(key,projId,checked){
   if(checked)_selectedKeys.add(key);else _selectedKeys.delete(key);
+  const chk=document.querySelector(`.bulk-chk[data-key="${CSS.escape(key)}"]`);
+  if(chk?.dataset?.area)_updateAreaSelInd(chk.dataset.area);
   _updateBulkBar(projId);
 }
 function _updateBulkBar(projId){
@@ -1932,6 +1974,33 @@ function _desmarcarTodos(projId){
   document.querySelectorAll(`.bulk-chk[data-pid="${projId}"]`).forEach(c=>{
     _selectedKeys.delete(c.dataset.key);c.checked=false;
   });
+  _updateBulkBar(projId);
+}
+function _toggleArea(areaKey){
+  if(_expandedAreas.has(areaKey))_expandedAreas.delete(areaKey);
+  else _expandedAreas.add(areaKey);
+  renderP1();
+}
+function _areaIndId(areaKey){return'area-ind-'+areaKey.replace(/[^a-zA-Z0-9]/g,'_');}
+function _updateAreaSelInd(areaKey){
+  const el=document.getElementById(_areaIndId(areaKey));
+  if(!el)return;
+  const keys=_areaProdKeys[areaKey]||[];
+  const n=keys.filter(k=>_selectedKeys.has(k)).length;
+  const total=keys.length;
+  if(n===0){el.style.display='none';el.innerHTML='';}
+  else if(n===total){
+    el.style.display='';
+    el.innerHTML='<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;white-space:nowrap">✓ todos</span>';
+  } else {
+    el.style.display='';
+    el.innerHTML='<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);white-space:nowrap">'+n+'/'+total+'</span>';
+  }
+}
+function _selecionarAreaTodos(areaKey,projId){
+  (_areaProdKeys[areaKey]||[]).forEach(k=>_selectedKeys.add(k));
+  document.querySelectorAll(`.bulk-chk[data-area="${CSS.escape(areaKey)}"]`).forEach(c=>c.checked=true);
+  _updateAreaSelInd(areaKey);
   _updateBulkBar(projId);
 }
 function _demandarSelecionados(projId){
