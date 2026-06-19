@@ -160,7 +160,7 @@ app.get('/api/producao', async (_req, res) => {
 
 // GET /api/producao/:key — busca um documento
 app.get('/api/producao/:key', async (req, res) => {
-  const key = decodeURIComponent(req.params.key);
+  const key = req.params.key; // Express já decodifica req.params uma vez; não decodificar novamente
   if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
   try {
     const doc = await Producao.findOne({ key }).lean();
@@ -174,7 +174,7 @@ app.get('/api/producao/:key', async (req, res) => {
 
 // PUT /api/producao/:key — upsert
 app.put('/api/producao/:key', async (req, res) => {
-  const key = decodeURIComponent(req.params.key);
+  const key = req.params.key;
   if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
 
   const etapas = sanitizeEtapas(req.body.etapas);
@@ -195,7 +195,7 @@ app.put('/api/producao/:key', async (req, res) => {
 
 // GET /api/producao/:key/comentarios
 app.get('/api/producao/:key/comentarios', async (req, res) => {
-  const key = decodeURIComponent(req.params.key);
+  const key = req.params.key;
   if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
   try {
     const doc = await Producao.findOne({ key }, 'comentarios').lean();
@@ -208,7 +208,7 @@ app.get('/api/producao/:key/comentarios', async (req, res) => {
 
 // POST /api/producao/:key/comentarios
 app.post('/api/producao/:key/comentarios', async (req, res) => {
-  const key = decodeURIComponent(req.params.key);
+  const key = req.params.key;
   if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
   const { text, userName } = req.body;
   if (!text || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Texto obrigatório' });
@@ -232,7 +232,7 @@ app.post('/api/producao/:key/comentarios', async (req, res) => {
 
 // DELETE /api/producao/:key
 app.delete('/api/producao/:key', async (req, res) => {
-  const key = decodeURIComponent(req.params.key);
+  const key = req.params.key;
   if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
   try {
     await Producao.deleteOne({ key });

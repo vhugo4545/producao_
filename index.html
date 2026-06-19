@@ -2432,11 +2432,12 @@ function saveProducaoState(key, delay=400){
       if(txt)obs.push({idx:i,text:txt});
     }
     try{
-      await fetch(PROD_API+'/api/producao/'+encodeURIComponent(key),{
+      const r=await fetch(PROD_API+'/api/producao/'+encodeURIComponent(key),{
         method:'PUT',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({etapas,obs})
       });
+      if(!r.ok)console.warn('[producao] erro HTTP ao salvar ('+r.status+') — estado salvo só no localStorage:', key);
     }catch(e){console.warn('[producao] backend offline — estado salvo só no localStorage:', key);}
   }, delay);
 }
