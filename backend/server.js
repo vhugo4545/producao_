@@ -1,18 +1,23 @@
 require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
+const express  = require('express');
+const cors     = require('cors');
 const mongoose = require('mongoose');
+const bcrypt   = require('bcryptjs');
+const crypto   = require('crypto');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ──────────────────────────────────────────────
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json({ limit: '256kb' })); // rejeita payloads gigantes
+app.use(express.json({ limit: '256kb' }));
 
 // ── Mongoose ────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('[db] MongoDB conectado'))
+  .then(async () => {
+    console.log('[db] MongoDB conectado');
+    await seedUsuarios().catch(err => console.error('[seed] Erro:', err.message));
+  })
   .catch(err => { console.error('[db] Falha na conexão:', err.message); process.exit(1); });
 
 // ── Schemas ─────────────────────────────────────────────────
@@ -68,6 +73,216 @@ const filaProducaoSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const FilaProducao = mongoose.model('FilaProducao', filaProducaoSchema);
+
+// ── Schema Usuario ───────────────────────────────────────────
+const usuarioSchema = new mongoose.Schema({
+  id:           { type: String, required: true, unique: true, maxlength: 64 },
+  nome:         { type: String, required: true, maxlength: 128 },
+  apelido:      { type: String, maxlength: 64, default: '' },
+  cargo:        { type: String, maxlength: 128, default: '' },
+  setor:        { type: String, maxlength: 64, default: '' },
+  role:         { type: String, enum: ['gestor', 'operador'], default: 'operador' },
+  passwordHash: { type: String, required: true },
+  firstAccess:  { type: Boolean, default: true },
+  ativo:        { type: Boolean, default: true },
+}, { timestamps: true });
+const Usuario = mongoose.model('Usuario', usuarioSchema);
+
+// ── Schema Sessao ────────────────────────────────────────────
+const sessaoSchema = new mongoose.Schema({
+  token:     { type: String, required: true, unique: true },
+  userId:    { type: String, required: true, maxlength: 64 },
+  expiresAt: { type: Date, required: true },
+}, { timestamps: true });
+sessaoSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL auto-delete
+sessaoSchema.index({ userId: 1 });
+const Sessao = mongoose.model('Sessao', sessaoSchema);
+
+// ── Seed de usuários iniciais ─────────────────────────────────
+const USUARIOS_INICIAIS = [
+  {id:'luizao',  nome:'Luiz Fernando Lima',             apelido:'Luizão',  cargo:'Coordenador de Produção',    setor:'Coordenação', role:'gestor'},
+  {id:'davidson',nome:'Davidson Junio Pereira Maciel',  apelido:'',        cargo:'Serralheiro Montador',        setor:'Serralheria', role:'operador'},
+  {id:'dionata', nome:'Dionata Alan Silva Costa',        apelido:'',        cargo:'Serralheiro Montador I',      setor:'Serralheria', role:'operador'},
+  {id:'ednaldo', nome:'Ednaldo Gomes Filho',             apelido:'',        cargo:'Serralheiro Montador III',    setor:'Serralheria', role:'operador'},
+  {id:'erivaldo',nome:'Erivaldo Amaro de Almeida',      apelido:'',        cargo:'Serralheiro Montador III',    setor:'Serralheria', role:'operador'},
+  {id:'leonardo',nome:'Leonardo Sousa Oliveira',         apelido:'',        cargo:'Serralheiro Montador III',    setor:'Serralheria', role:'operador'},
+  {id:'roberto', nome:'Roberto Martins do Nascimento',  apelido:'',        cargo:'Serralheiro Montador',        setor:'Serralheria', role:'operador'},
+  {id:'rodrigo_bc',nome:'Rodrigo Brito Cardoso',        apelido:'',        cargo:'Serralheiro Montador III',    setor:'Serralheria', role:'operador'},
+  {id:'ronan',   nome:'Ronan Gomes de Souza Lima',      apelido:'',        cargo:'Serralheiro Montador',        setor:'Serralheria', role:'operador'},
+  {id:'sebastiao',nome:'Sebastião dos Reis de Matos',   apelido:'',        cargo:'Serralheiro Montador III',    setor:'Serralheria', role:'operador'},
+  {id:'matheus', nome:'Matheus Henrique Souza Braga',   apelido:'',        cargo:'Ajudante de Serralheiro',     setor:'Serralheria', role:'operador'},
+  {id:'osvaldo', nome:'Osvaldo Paura Oliveira',          apelido:'',        cargo:'Ajudante de Serralheiro',     setor:'Serralheria', role:'operador'},
+  {id:'gilmar',  nome:'José Gilmar Pinheiro',            apelido:'',        cargo:'Polidor Instrutor',           setor:'Polimento',   role:'operador'},
+  {id:'fernando',nome:'Fernando Pereira de Souza Junior',apelido:'',        cargo:'Polidor 2',                   setor:'Polimento',   role:'operador'},
+  {id:'sergio',  nome:'Sergio Ricardo Pio',              apelido:'',        cargo:'Polidor 2',                   setor:'Polimento',   role:'operador'},
+  {id:'jose_carlos',nome:'José Carlos Soares da Cruz',  apelido:'',        cargo:'Instalador Externo',          setor:'Instalação',  role:'operador'},
+  {id:'rodrigo_ns', nome:'Rodrigo Nobre dos Santos',    apelido:'',        cargo:'Torneiro',                    setor:'Torneiro',    role:'operador'},
+];
+
+async function seedUsuarios() {
+  // Remove índice legado de versão anterior (email_1 único que conflita)
+  try { await mongoose.connection.collection('usuarios').dropIndex('email_1'); } catch (_) {}
+  const defaultHash = await bcrypt.hash('Senha123456', 10);
+  const ops = USUARIOS_INICIAIS.map(u => ({
+    updateOne: {
+      filter: { id: u.id },
+      update: { $setOnInsert: { ...u, passwordHash: defaultHash, firstAccess: true, ativo: true } },
+      upsert: true,
+    }
+  }));
+  await Usuario.bulkWrite(ops, { ordered: false });
+  console.log('[seed] Usuários verificados');
+}
+
+// ── Auth middleware ───────────────────────────────────────────
+async function requireAuth(req, res, next) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ error: 'Não autenticado' });
+  try {
+    const sessao = await Sessao.findOne({ token }).lean();
+    if (!sessao || sessao.expiresAt < new Date()) {
+      if (sessao) await Sessao.deleteOne({ token });
+      return res.status(401).json({ error: 'Sessão expirada' });
+    }
+    const user = await Usuario.findOne({ id: sessao.userId, ativo: true }, '-passwordHash -__v').lean();
+    if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
+    req.user = user;
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Erro de autenticação' });
+  }
+}
+
+function requireGestor(req, res, next) {
+  if (req.user?.role !== 'gestor') return res.status(403).json({ error: 'Acesso restrito ao gestor' });
+  next();
+}
+
+// ── POST /api/auth/login ──────────────────────────────────────
+app.post('/api/auth/login', async (req, res) => {
+  const { userId, senha } = req.body;
+  if (!userId || !senha) return res.status(400).json({ error: 'userId e senha obrigatórios' });
+  try {
+    const user = await Usuario.findOne({ id: String(userId).slice(0, 64), ativo: true }).lean();
+    if (!user) return res.status(401).json({ error: 'Usuário ou senha incorretos' });
+    const ok = await bcrypt.compare(senha, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Usuário ou senha incorretos' });
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 dias
+    await Sessao.create({ token, userId: user.id, expiresAt });
+    const { passwordHash, ...pub } = user;
+    res.json({ ok: true, token, user: pub, firstAccess: user.firstAccess });
+  } catch (e) {
+    console.error('[POST /api/auth/login]', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── GET /api/auth/me — valida token e retorna usuário atual ──
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ ok: true, user: req.user });
+});
+
+// ── POST /api/auth/logout ─────────────────────────────────────
+app.post('/api/auth/logout', requireAuth, async (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  await Sessao.deleteOne({ token });
+  res.json({ ok: true });
+});
+
+// ── POST /api/auth/change-password ───────────────────────────
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  const { senhaAtual, novaSenha } = req.body;
+  if (!novaSenha || novaSenha.length < 6) return res.status(400).json({ error: 'Nova senha deve ter ao menos 6 caracteres' });
+  try {
+    const user = await Usuario.findOne({ id: req.user.id });
+    const ok = await bcrypt.compare(senhaAtual, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Senha atual incorreta' });
+    const hash = await bcrypt.hash(novaSenha, 10);
+    await Usuario.updateOne({ id: req.user.id }, { passwordHash: hash, firstAccess: false });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[POST /api/auth/change-password]', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── GET /api/users — lista usuários (gestor) ──────────────────
+app.get('/api/users', requireAuth, requireGestor, async (_req, res) => {
+  try {
+    const users = await Usuario.find({}, '-passwordHash -__v').sort({ setor: 1, nome: 1 }).lean();
+    res.json(users);
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── POST /api/users — cria usuário (gestor) ───────────────────
+app.post('/api/users', requireAuth, requireGestor, async (req, res) => {
+  const { id, nome, apelido, cargo, setor, role } = req.body;
+  if (!id || !nome) return res.status(400).json({ error: 'id e nome obrigatórios' });
+  if (!/^[a-z0-9_]{2,32}$/.test(id)) return res.status(400).json({ error: 'id inválido (use letras minúsculas, números e _)' });
+  try {
+    const hash = await bcrypt.hash('Senha123456', 10);
+    const user = await Usuario.create({
+      id: id.slice(0, 64), nome: nome.slice(0, 128),
+      apelido: (apelido || '').slice(0, 64),
+      cargo: (cargo || '').slice(0, 128),
+      setor: (setor || '').slice(0, 64),
+      role: role === 'gestor' ? 'gestor' : 'operador',
+      passwordHash: hash, firstAccess: true, ativo: true,
+    });
+    const { passwordHash, __v, ...pub } = user.toObject();
+    res.json({ ok: true, user: pub });
+  } catch (e) {
+    if (e.code === 11000) return res.status(409).json({ error: 'ID já existe' });
+    console.error('[POST /api/users]', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── PUT /api/users/:id — atualiza usuário (gestor) ───────────
+app.put('/api/users/:id', requireAuth, requireGestor, async (req, res) => {
+  const { nome, apelido, cargo, setor, role, ativo } = req.body;
+  try {
+    const user = await Usuario.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: { nome, apelido, cargo, setor, role, ativo } },
+      { new: true, projection: '-passwordHash -__v' }
+    ).lean();
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ ok: true, user });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── POST /api/users/:id/reset-password — reset senha (gestor) ─
+app.post('/api/users/:id/reset-password', requireAuth, requireGestor, async (req, res) => {
+  const { novaSenha } = req.body;
+  const senha = (novaSenha || 'Senha123456').trim();
+  if (senha.length < 6) return res.status(400).json({ error: 'Senha muito curta (mín. 6 caracteres)' });
+  try {
+    const hash = await bcrypt.hash(senha, 10);
+    const r = await Usuario.updateOne({ id: req.params.id }, { passwordHash: hash, firstAccess: true });
+    if (!r.matchedCount) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── DELETE /api/producao/all — limpa todas demandas (gestor) ──
+app.delete('/api/producao/all', requireAuth, requireGestor, async (_req, res) => {
+  try {
+    const r = await Producao.deleteMany({});
+    console.log('[admin] Producao limpo —', r.deletedCount, 'documentos removidos');
+    res.json({ ok: true, deleted: r.deletedCount });
+  } catch (e) {
+    console.error('[DELETE /api/producao/all]', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
 
 // ── POST /api/fila-producao — recebe notificação do Kommo ────
 app.post('/api/fila-producao', async (req, res) => {
@@ -158,6 +373,20 @@ app.get('/api/producao', async (_req, res) => {
   }
 });
 
+// GET /api/producao/updates?since=<ms> — só docs atualizados após o timestamp
+// Usado pelo polling incremental do frontend (evita baixar tudo a cada 20s)
+app.get('/api/producao/updates', async (req, res) => {
+  const since = Number(req.query.since) || 0;
+  try {
+    const filter = since > 0 ? { updatedAt: { $gt: new Date(since) } } : {};
+    const docs = await Producao.find(filter, '-__v').lean();
+    res.json(docs);
+  } catch (err) {
+    console.error('[GET /api/producao/updates]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // GET /api/producao/:key — busca um documento
 app.get('/api/producao/:key', async (req, res) => {
   const key = req.params.key; // Express já decodifica req.params uma vez; não decodificar novamente
@@ -226,6 +455,33 @@ app.post('/api/producao/:key/comentarios', async (req, res) => {
     res.status(201).json(comentario);
   } catch (err) {
     console.error('[POST comentarios]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// POST /api/producao/batch — upsert de múltiplos documentos em uma única requisição
+app.post('/api/producao/batch', express.json({ limit: '512kb' }), async (req, res) => {
+  const items = req.body?.items;
+  if (!Array.isArray(items) || !items.length)
+    return res.status(400).json({ error: 'Array de items obrigatório' });
+
+  const ops = items
+    .filter(item => validateKey(item.key))
+    .map(item => ({
+      updateOne: {
+        filter: { key: item.key },
+        update: { $set: { etapas: sanitizeEtapas(item.etapas), obs: sanitizeObs(item.obs || []) } },
+        upsert: true,
+      }
+    }));
+
+  if (!ops.length) return res.status(400).json({ error: 'Nenhuma chave válida' });
+
+  try {
+    await Producao.bulkWrite(ops, { ordered: false });
+    res.json({ ok: true, saved: ops.length });
+  } catch (err) {
+    console.error('[POST /api/producao/batch]', err.message);
     res.status(500).json({ error: 'Erro interno' });
   }
 });
@@ -343,22 +599,67 @@ app.post('/api/proposals-cache/sync', express.json({ limit: '500kb' }), async (r
 
 // GET /api/user-context/:userId
 // Retorna os proposalIds onde este usuário tem etapas atribuídas
-// Permite que o frontend busque prioritariamente as propostas certas
 app.get('/api/user-context/:userId', async (req, res) => {
   const userId = req.params.userId?.slice(0, 64);
   if (!userId) return res.status(400).json({ error: 'userId obrigatório' });
   try {
-    // Busca todos os docs de producao onde alguma etapa está atribuída a este usuário
     const docs = await Producao.find(
       { 'etapas.assignedTo': userId },
       'key -_id'
     ).lean();
-    // Extrai proposalIds únicos do campo key (formato: proposalId__grupoId__prodNome)
     const proposalIds = [...new Set(docs.map(d => d.key.split('__')[0]).filter(Boolean))];
     res.json({ userId, proposalIds });
   } catch (err) {
     console.error('[GET /api/user-context]', err.message);
     res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// GET /api/operator-context/:userId
+// Endpoint de fast-load para operadores: retorna em UMA chamada
+//   • docs de produção com etapas ativas atribuídas ao usuário
+//   • proposals correspondentes do cache do servidor
+// Chamado logo após o login do operador para mostrar tarefas em < 500ms
+app.get('/api/operator-context/:userId', async (req, res) => {
+  const userId = req.params.userId?.slice(0, 64);
+  if (!userId) return res.status(400).json({ error: 'userId obrigatório' });
+  try {
+    // 1. Docs de produção onde o usuário tem etapa pendente/ativa/pausada
+    const producaoDocs = await Producao.find(
+      { etapas: { $elemMatch: { assignedTo: userId, state: { $in: ['pending', 'active', 'paused'] } } } },
+      '-__v'
+    ).lean();
+
+    // 2. proposalIds únicos extraídos das keys
+    const proposalIds = [...new Set(producaoDocs.map(d => d.key.split('__')[0]).filter(Boolean))];
+
+    // 3. Propostas do cache (paralelo ao passo 1 para máxima velocidade)
+    const cachedProposals = proposalIds.length
+      ? await ProposalCache.find({ proposalId: { $in: proposalIds } }, 'data -_id').lean()
+      : [];
+
+    res.json({
+      producao:  producaoDocs,
+      proposals: cachedProposals.map(d => d.data),
+    });
+  } catch (err) {
+    console.error('[GET /api/operator-context]', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── Proxy: GET /api/propostas — repassa para a API Kommo ─────
+const KOMMO_API_BASE = process.env.KOMMO_API_BASE || 'https://ulhoa-0a02024d350a.herokuapp.com';
+app.get('/api/propostas', async (req, res) => {
+  try {
+    const qs = new URLSearchParams(req.query).toString();
+    const url = `${KOMMO_API_BASE}/api/propostas${qs ? '?' + qs : ''}`;
+    const upstream = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const body = await upstream.json();
+    res.status(upstream.status).json(body);
+  } catch (err) {
+    console.error('[proxy /api/propostas]', err.message);
+    res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
   }
 });
 
