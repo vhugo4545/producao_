@@ -581,6 +581,35 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
   </div>
 </div>
 
+<!-- MODAL OPERAÇÃO AVULSA -->
+<div id="oa-overlay" onclick="if(event.target===this)fecharModalOA()" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg);border-radius:18px;padding:24px;width:100%;max-width:400px;box-shadow:0 12px 48px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:14px">
+    <div style="font-size:16px;font-weight:800;color:var(--tx)">Nova Operação Avulsa</div>
+    <div style="font-size:12px;color:var(--tx3)">Produção em lote sem pedido atrelado</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Descrição</label>
+      <input id="oa-titulo" type="text" maxlength="256" placeholder="Ex.: Chumbador 3/8 — Lote 200un"
+        style="font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:10px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;width:100%;box-sizing:border-box">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Observação (opcional)</label>
+      <textarea id="oa-desc" maxlength="1000" rows="2" placeholder="Detalhes, medidas, quantidade…"
+        style="font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:10px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;width:100%;box-sizing:border-box;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Atribuir para</label>
+      <select id="oa-operador" style="font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:10px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;width:100%;box-sizing:border-box">
+        <option value="">Selecionar operador…</option>
+      </select>
+    </div>
+    <div id="oa-erro" style="display:none;font-size:12px;color:var(--red);font-weight:600"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button onclick="fecharModalOA()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button id="oa-btn-salvar" onclick="salvarOperacaoAvulsa()" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer">Criar operação</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL MULTI-ITEM -->
 <div id="mi-overlay" onclick="if(event.target===this)_miFechar()" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px">
   <div class="mi-modal">
@@ -1614,6 +1643,7 @@ function _entrarComoUsuario(user){
     // Gestor sem dados (login manual sem auto-load) — carrega agora
     _carregarPropostasTodas();
   }
+  carregarOperacoesAvulsas();
   const isGestorRole=currentUser.role==='gestor';
   $('sb-meu-dash').style.display=isGestorRole?'none':'flex';
   $('sb-dash').style.display=isGestorRole?'flex':'none';
@@ -1843,11 +1873,13 @@ function renderMinhasTarefas(){
   const st=$('p1-section-title');if(st)st.textContent='Minhas Tarefas';
   const body=$('p1-body');
   const tasks=getMinhasTarefas();
+  const oasMinhas=_operacoesAvulsas.filter(o=>o.assignedTo===currentUser?.id&&o.state!=='done');
 
+  const totalTarefas=tasks.length+oasMinhas.length;
   const sub=$('p1-sub');
-  if(sub)sub.textContent=tasks.length+' tarefa'+(tasks.length!==1?'s':'')+' atribuída'+(tasks.length!==1?'s':'')+' a você';
+  if(sub)sub.textContent=totalTarefas+' tarefa'+(totalTarefas!==1?'s':'')+' atribuída'+(totalTarefas!==1?'s':'')+' a você';
 
-  if(!tasks.length){
+  if(!totalTarefas){
     const aindaCarregando=currentUser?.role==='operador'?!_operadorPronto:allData.length<(_totalPropostas||allData.length+1);
     body.innerHTML=aindaCarregando
       ?'<div style="display:flex;flex-direction:column;gap:0">'+Array(4).fill(_skeletonCard()).join('')+'</div>'
@@ -1963,6 +1995,30 @@ function renderMinhasTarefas(){
   });
 
   html+='</div>';
+
+  // ── Operações Avulsas do operador ──
+  if(oasMinhas.length>0){
+    html+=`<div style="margin-top:16px">
+      <div style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;padding-left:2px">Operações Avulsas</div>
+      <div style="display:flex;flex-direction:column;gap:6px">`;
+    oasMinhas.forEach(oa=>{
+      const s=oa.state||'pending';
+      const cls=s==='active'?'b-green':s==='paused'?'b-amber':'b-gray';
+      const lbl=s==='active'?'Em andamento':s==='paused'?'Pausada':'Aguardando';
+      html+=`<div onclick="abrirOA('${escJs(oa._id)}')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;background:var(--bg2);border:1px solid var(--bd);cursor:pointer;box-shadow:var(--shadow)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--bd)'">
+        <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--amber)"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(oa.titulo)}</div>
+          ${oa.descricao?`<div style="font-size:11px;color:var(--tx3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(oa.descricao)}</div>`:''}
+        </div>
+        <span class="badge b-yellow" style="font-size:10px;background:#fef3c7;color:#92400e;border:1px solid #fde68a">Avulso</span>
+        <span class="badge ${cls}" style="font-size:10px">${lbl}</span>
+        <div style="color:var(--tx3);font-size:14px">›</div>
+      </div>`;
+    });
+    html+='</div></div>';
+  }
+
   body.innerHTML=html;
 }
 function goToEtapa(projId,grupoId,key,etapaIdx){
@@ -2011,7 +2067,19 @@ function renderP1(){
   if(currentUser?.role==='operador'){renderMinhasTarefas();return;}
   // Gestor — simple proposal list (click to open detail)
   const el=$('p1-stats');if(el)el.style.display='none';
-  const fb=$('p1-filter-bar');if(fb)fb.style.display='none';
+  const fb=$('p1-filter-bar');
+  if(fb){
+    fb.style.display='flex';
+    // Insere botão avulso se ainda não existe
+    if(!$('btn-oa')){
+      const btn=document.createElement('button');
+      btn.id='btn-oa';
+      btn.textContent='＋ Op. Avulsa';
+      btn.setAttribute('style','font-size:12px;font-weight:700;font-family:\'Plus Jakarta Sans\',sans-serif;padding:7px 13px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap');
+      btn.onclick=abrirModalOA;
+      fb.appendChild(btn);
+    }
+  }
   const st=$('p1-section-title');if(st)st.textContent='Pedidos em Produção';
   const sub=$('p1-sub');if(sub)sub.textContent='';
 
@@ -2296,7 +2364,28 @@ function renderP1(){
   const countNote=q&&filtered.length<projs.length
     ?`<div style="font-size:11px;color:var(--tx3);margin-bottom:10px;padding-left:2px">${filtered.length} de ${projs.length} pedidos</div>`
     :'';
-  $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>';
+  // Seção operações avulsas (gestor vê todas; filtra por busca se houver)
+  const oasFiltradas=_operacoesAvulsas.filter(o=>o.state!=='done'&&(!q||o.titulo.toLowerCase().includes(q)||o.descricao?.toLowerCase().includes(q)));
+  let oaHtml='';
+  if(oasFiltradas.length>0){
+    oaHtml=`<div style="margin-top:20px"><div style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;padding-left:2px">Operações Avulsas em andamento</div><div style="display:flex;flex-direction:column;gap:6px">`
+      +oasFiltradas.map(oa=>{
+        const s=oa.state||'pending';
+        const cls=s==='active'?'b-green':s==='paused'?'b-amber':'b-gray';
+        const lbl=s==='active'?'Em andamento':s==='paused'?'Pausada':'Aguardando';
+        const op=USUARIOS.find(u=>u.id===oa.assignedTo);
+        return`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--bg2);border:1px solid var(--bd);box-shadow:var(--shadow)">
+          <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--amber)"></div>
+          <div onclick="abrirOA('${escJs(oa._id)}')" style="flex:1;min-width:0;cursor:pointer">
+            <div style="font-size:13px;font-weight:700;color:var(--tx)">${esc(oa.titulo)}</div>
+            <div style="font-size:11px;color:var(--tx3);margin-top:2px">${op?op.nome.split(' ')[0]:'—'}${oa.descricao?' · '+esc(oa.descricao.slice(0,40)):''}</div>
+          </div>
+          <span class="badge ${cls}" style="font-size:10px">${lbl}</span>
+          <button onclick="event.stopPropagation();excluirOperacaoAvulsa('${escJs(oa._id)}')" title="Remover" style="flex-shrink:0;font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;border:1px solid var(--red-bd);background:transparent;color:var(--tx3);cursor:pointer;padding:3px 8px;border-radius:6px" onmouseover="this.style.background='var(--red-bg)';this.style.color='var(--red)'" onmouseout="this.style.background='transparent';this.style.color='var(--tx3)'">Remover</button>
+        </div>`;
+      }).join('')+'</div></div>';
+  }
+  $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>'+oaHtml;
   // Mantém foco e cursor no campo de busca após re-render
   if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
   // Inicializa estado indeterminate dos checkboxes de área (não pode ser feito via atributo HTML)
@@ -2354,6 +2443,185 @@ function abrirModalDemandar(key){
 function fecharModalDemandar(){
   document.getElementById('dm-overlay').style.display='none';
   _dmKey=null; _dmMode=0;
+}
+
+// ── Operações Avulsas ────────────────────────────────────────
+let _operacoesAvulsas=[];
+
+async function carregarOperacoesAvulsas(){
+  try{
+    const r=await fetch(PROD_API+'/api/operacoes-avulsas');
+    if(r.ok) _operacoesAvulsas=await r.json();
+  }catch(_){}
+}
+
+function abrirModalOA(){
+  const sel=$('oa-operador');
+  sel.innerHTML='<option value="">Selecionar operador…</option>'+
+    USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')} — ${u.cargo}</option>`).join('');
+  $('oa-titulo').value='';
+  $('oa-desc').value='';
+  $('oa-erro').style.display='none';
+  $('oa-overlay').style.display='flex';
+  setTimeout(()=>$('oa-titulo').focus(),50);
+}
+
+function fecharModalOA(){$('oa-overlay').style.display='none';}
+
+async function salvarOperacaoAvulsa(){
+  const titulo=$('oa-titulo').value.trim();
+  const descricao=$('oa-desc').value.trim();
+  const assignedTo=$('oa-operador').value;
+  const erro=$('oa-erro');
+  if(!titulo){erro.textContent='Informe a descrição da operação.';erro.style.display='block';return;}
+  if(!assignedTo){erro.textContent='Selecione o operador.';erro.style.display='block';return;}
+  erro.style.display='none';
+  const btn=$('oa-btn-salvar');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    const r=await fetch(PROD_API+'/api/operacoes-avulsas',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_authToken},
+      body:JSON.stringify({titulo,descricao,assignedTo})
+    });
+    if(!r.ok){const d=await r.json();erro.textContent=d.error||'Erro ao criar.';erro.style.display='block';return;}
+    const nova=await r.json();
+    _operacoesAvulsas.unshift(nova);
+    fecharModalOA();
+    toast('Operação avulsa criada');
+  }catch(e){erro.textContent='Sem conexão.';erro.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Criar operação';}
+}
+
+async function excluirOperacaoAvulsa(id){
+  if(!confirm('Remover esta operação avulsa?'))return;
+  try{
+    await fetch(PROD_API+'/api/operacoes-avulsas/'+id,{
+      method:'DELETE',headers:{'Authorization':'Bearer '+_authToken}
+    });
+    _operacoesAvulsas=_operacoesAvulsas.filter(o=>o._id!==id);
+    renderP1();
+    toast('Operação removida');
+  }catch(_){toast('Erro ao remover');}
+}
+
+// Abre tela de timer para operação avulsa
+function abrirOA(id){
+  const oa=_operacoesAvulsas.find(o=>o._id===id);if(!oa)return;
+  // Usa variáveis globais de controle de etapa, adaptadas para OA
+  curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  _curOA=oa;
+  const nomeCurto=USUARIOS.find(u=>u.id===oa.assignedTo)?.nome.split(' ')[0]||oa.assignedTo;
+  setBread([{label:'Op. Avulsas',onclick:()=>renderP1()},{label:oa.titulo,active:true}]);
+  setTitle('Operação Avulsa');
+  renderP5OA();
+  showPage('p5');
+}
+
+let _curOA=null;
+
+function renderP5OA(){
+  const oa=_curOA;if(!oa)return;
+  const s=oa.state||'pending';
+  const timerEl=$('p5-timer'),stRow=$('p5-state-row');
+
+  // Badge avulso no topo
+  $('p5-etapa-num').textContent='Operação Avulsa';
+  $('p5-badge-dot').style.background='var(--amber)';
+  $('p5-badge-nome').textContent=oa.titulo+(oa.descricao?' — '+oa.descricao:'');
+
+  if(timerEl){timerEl.style.display='block';timerEl.textContent=fmtTime(_oaElapsed());timerEl.className='big-timer'+(s==='active'?' running':s==='paused'?' paused':s==='done'?' done':'');}
+  if(stRow){stRow.style.display='flex';}
+  const dot=$('p5-state-dot');if(dot)dot.className='state-dot'+(s==='active'?' running':s==='paused'?' paused':s==='done'?' done':'');
+  const txt=$('p5-state-txt');if(txt)txt.textContent=s==='active'?'em andamento':s==='paused'?'pausado':s==='done'?'concluído':'aguardando início';
+
+  const isMyTask=currentUser?.role==='gestor'||oa.assignedTo===currentUser?.id;
+  let h='';
+  if(s==='done'){
+    h=`<div style="text-align:center;padding:10px 0"><div style="font-size:32px;margin-bottom:6px">✓</div><div style="font-size:14px;color:var(--blue);font-weight:700">Operação concluída</div></div>`;
+  } else if(!isMyTask){
+    const op=USUARIOS.find(u=>u.id===oa.assignedTo);
+    h=`<div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px 0">Atribuída a <b>${op?.nome.split(' ')[0]||oa.assignedTo}</b></div>`;
+  } else if(s==='pending'){
+    h=`<button class="cbtn cbtn-start cbtn-xl" onclick="oaIniciar()">▶ Iniciar</button>`;
+  } else if(s==='active'){
+    h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="cbtn cbtn-pause cbtn-xl" onclick="oaPausar()">⏸ Pausar</button>
+      <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="oaEncerrar()">■ Encerrar operação</button>
+    </div>`;
+  } else if(s==='paused'){
+    h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="cbtn cbtn-resume cbtn-xl" onclick="oaRetomar()">▶ Retomar</button>
+      <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="oaEncerrar()">■ Encerrar operação</button>
+    </div>`;
+  }
+  // Histórico de tempo
+  const elapsed=_oaElapsed();
+  if(oa.firstStartAt||oa.endAt||elapsed>0){
+    h+=`<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd);width:100%;text-align:left">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Histórico de tempo</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        ${oa.firstStartAt?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--tx3)">Início</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(oa.firstStartAt)}</span></div>`:''}
+        ${oa.endAt?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--tx3)">Conclusão</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(oa.endAt)}</span></div>`:''}
+        ${elapsed>0?`<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)"><span style="color:var(--tx)">Total</span><span style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(elapsed)}</span></div>`:''}
+      </div>
+    </div>`;
+  }
+  $('p5-ctrl').innerHTML=h;
+
+  if(s==='active') _oaStartLoop();
+}
+
+function _oaElapsed(){
+  const oa=_curOA;if(!oa)return 0;
+  let t=oa.baseElapsed||0;
+  if(oa.state==='active'&&oa.startAt) t+=(Date.now()-oa.startAt)/1000;
+  return Math.max(0,Math.round(t));
+}
+
+let _oaRaf=null;
+function _oaLoop(){
+  if(!_curOA||_curOA.state!=='active'){_oaRaf=null;return;}
+  const el=$('p5-timer');if(el)el.textContent=fmtTime(_oaElapsed());
+  _oaRaf=requestAnimationFrame(_oaLoop);
+}
+function _oaStartLoop(){if(!_oaRaf)_oaRaf=requestAnimationFrame(_oaLoop);}
+
+async function _oaSalvar(upd){
+  Object.assign(_curOA,upd);
+  const idx=_operacoesAvulsas.findIndex(o=>o._id===_curOA._id);
+  if(idx>=0)_operacoesAvulsas[idx]=_curOA;
+  try{
+    await fetch(PROD_API+'/api/operacoes-avulsas/'+_curOA._id,{
+      method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(upd)
+    });
+  }catch(_){}
+}
+
+function oaIniciar(){
+  if(_curOA.state!=='pending')return;
+  const now=Date.now();
+  _oaSalvar({state:'active',startAt:now,firstStartAt:now,baseElapsed:0});
+  renderP5OA();
+}
+function oaPausar(){
+  if(_curOA.state!=='active')return;
+  const elapsed=_oaElapsed();
+  _oaRaf=null;
+  _oaSalvar({state:'paused',baseElapsed:elapsed,startAt:null});
+  renderP5OA();
+}
+function oaRetomar(){
+  if(_curOA.state!=='paused')return;
+  _oaSalvar({state:'active',startAt:Date.now()});
+  renderP5OA();
+}
+function oaEncerrar(){
+  const elapsed=_oaElapsed();
+  _oaRaf=null;
+  _oaSalvar({state:'done',baseElapsed:elapsed,startAt:null,endAt:Date.now()});
+  renderP5OA();
+  toast('Operação encerrada · '+fmtTime(elapsed));
 }
 
 function _opSelectHtml(id,placeholder){

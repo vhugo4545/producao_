@@ -63,6 +63,20 @@ const proposalCacheSchema = new mongoose.Schema({
 proposalCacheSchema.index({ syncedAt: 1 }, { expireAfterSeconds: 7200 }); // TTL 2h
 const ProposalCache = mongoose.model('ProposalCache', proposalCacheSchema);
 
+// ── Schema OperacaoAvulsa ────────────────────────────────────
+const operacaoAvulsaSchema = new mongoose.Schema({
+  titulo:       { type: String, required: true, maxlength: 256 },
+  descricao:    { type: String, maxlength: 1000, default: '' },
+  assignedTo:   { type: String, required: true, maxlength: 64 },
+  createdBy:    { type: String, required: true, maxlength: 64 },
+  state:        { type: String, default: 'pending', maxlength: 20 },
+  baseElapsed:  { type: Number, default: 0, min: 0 },
+  startAt:      { type: Number, default: null },
+  firstStartAt: { type: Number, default: null },
+  endAt:        { type: Number, default: null },
+}, { timestamps: true });
+const OperacaoAvulsa = mongoose.model('OperacaoAvulsa', operacaoAvulsaSchema);
+
 // ── Schema FilaProducao ──────────────────────────────────────
 const filaProducaoSchema = new mongoose.Schema({
   lead_id:          { type: Number, required: true, unique: true },
@@ -647,6 +661,39 @@ app.get('/api/operator-context/:userId', async (req, res) => {
     console.error('[GET /api/operator-context]', err.message);
     res.status(500).json({ error: 'Erro interno' });
   }
+});
+
+// ── Operações Avulsas ────────────────────────────────────────
+app.get('/api/operacoes-avulsas', async (_req, res) => {
+  try { res.json(await OperacaoAvulsa.find({}, '-__v').sort({ createdAt: -1 }).lean()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/operacoes-avulsas', requireAuth, requireGestor, async (req, res) => {
+  const { titulo, descricao, assignedTo } = req.body;
+  if (!titulo?.trim() || !assignedTo) return res.status(400).json({ error: 'titulo e assignedTo obrigatórios' });
+  try {
+    const op = await OperacaoAvulsa.create({ titulo: titulo.trim(), descricao: descricao?.trim() || '', assignedTo, createdBy: req.userId });
+    res.status(201).json(op);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/operacoes-avulsas/:id', async (req, res) => {
+  const allowed = ['state','baseElapsed','startAt','firstStartAt','endAt','titulo','descricao','assignedTo'];
+  const upd = {};
+  allowed.forEach(k => { if (req.body[k] !== undefined) upd[k] = req.body[k]; });
+  try {
+    const doc = await OperacaoAvulsa.findByIdAndUpdate(req.params.id, { $set: upd }, { new: true, runValidators: true }).lean();
+    if (!doc) return res.status(404).json({ error: 'Não encontrado' });
+    res.json(doc);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/operacoes-avulsas/:id', requireAuth, requireGestor, async (req, res) => {
+  try {
+    await OperacaoAvulsa.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Proxy: GET /api/propostas — repassa para a API Kommo ─────
