@@ -4,6 +4,7 @@ const cors     = require('cors');
 const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
 const crypto   = require('crypto');
+const path     = require('path');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -662,6 +663,11 @@ app.get('/api/propostas', async (req, res) => {
     res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
   }
 });
+
+// ── Frontend estático ────────────────────────────────────────
+const PUBLIC = path.join(__dirname, 'public');
+app.use(express.static(PUBLIC));
+app.get('*', (_req, res) => res.sendFile(path.join(PUBLIC, 'index.html')));
 
 // ── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`[server] Rodando na porta ${PORT}`));
