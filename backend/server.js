@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3001;
 
 // ── Middleware ──────────────────────────────────────────────
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '2mb' }));
 
 // ── Mongoose ────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
@@ -666,8 +666,11 @@ app.get('/api/propostas', async (req, res) => {
 
 // ── Frontend estático ────────────────────────────────────────
 const PUBLIC = path.join(__dirname, 'public');
-app.use(express.static(PUBLIC));
-app.get('*', (_req, res) => res.sendFile(path.join(PUBLIC, 'index.html')));
+app.use(express.static(PUBLIC, { etag: false, maxAge: 0 }));
+app.get('*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(PUBLIC, 'index.html'));
+});
 
 // ── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`[server] Rodando na porta ${PORT}`));
