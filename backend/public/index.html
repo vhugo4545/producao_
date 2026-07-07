@@ -344,7 +344,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .modal-actions{display:flex;gap:8px;justify-content:flex-end}
 
 /* MODAL DEMANDAR */
-.dm-modal{width:min(520px,calc(100vw - 24px));max-height:90vh;overflow-y:auto;padding:24px}
+.dm-modal{width:min(680px,calc(100vw - 24px));max-height:92vh;overflow-y:auto;padding:24px}
 .dm-modes{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
 .dm-mode-card{border:2px solid var(--bd);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:flex-start;gap:12px;background:var(--bg2)}
 .dm-mode-card:hover{border-color:var(--accent);background:var(--accent-light)}
@@ -886,11 +886,8 @@ const ETAPAS_PROD=[
   {nome:'100% da instalação finalizada',cor:'#bbf7d0',evento:true},
 ];
 // 32 etapas: cada etapa de produção seguida de validação do Luizão
-const ETAPAS=ETAPAS_PROD.flatMap((e,i)=>[
-  {...e,tipo:'producao',prodIdx:i},
-  {nome:'Validação — Luizão',cor:'#a5b4fc',tipo:'gestor',prodIdx:i,gestorFor:e.nome,nextProd:ETAPAS_PROD[i+1]?.nome||null},
-]);
-const TOTAL_PROD=ETAPAS_PROD.length;
+const ETAPAS=ETAPAS_PROD.map((e,i)=>({...e,tipo:'producao',prodIdx:i}));
+const TOTAL_PROD=ETAPAS.length; // 16
 
 let allData=[],curPage=1,totPages=1;
 // mapa global estável: prodKey → itemNum (calculado uma vez por proposta, igual para todos os usuários)
@@ -1026,9 +1023,15 @@ function getElapsed(k){const s=pState[k];if(!s)return 0;if(s.state==='running')r
 
 // ── Etapas ──
 function getEtapas(k){
-  if(!pEtapas[k])pEtapas[k]=ETAPAS.map(()=>({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null}));
+  if(!pEtapas[k])pEtapas[k]=ETAPAS.map(()=>({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null,workers:[],liberada:false}));
+  // Migra dados antigos com 32 etapas (formato anterior com validações intercaladas)
+  if(pEtapas[k].length>ETAPAS.length) pEtapas[k]=pEtapas[k].filter((_,i)=>i%2===0);
+  // Garante tamanho correto
+  while(pEtapas[k].length<ETAPAS.length) pEtapas[k].push({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null,workers:[],liberada:false});
   return pEtapas[k];
 }
+function workerElapsed(w){if(!w)return 0;let t=w.baseElapsed||0;if(w.startAt)t+=(Date.now()-w.startAt)/1000;return Math.max(0,t);}
+function _myWorker(e){return(e.workers||[]).find(w=>w.userId===currentUser?.id)||null;}
 function derivedState(k){
   const e=getEtapas(k);
   if(e.every(x=>x.state==='done'))return'done';
@@ -1036,34 +1039,31 @@ function derivedState(k){
   if(e.some(x=>x.state==='paused'||x.state==='done'))return'paused';
   return'idle';
 }
-function prodDone(k){return getEtapas(k).filter((x,i)=>ETAPAS[i]?.tipo==='producao'&&x.state==='done').length;}
+function prodDone(k){return getEtapas(k).filter(x=>x.state==='done').length;}
 function renderEtapas(){
   const k=curKey;const e=getEtapas(k);
   const doneCount=prodDone(k);
   $('etapas-progress').textContent=doneCount+' / '+TOTAL_PROD;
   $('etapas-body').innerHTML=e.map((es,i)=>{
     const cfg=ETAPAS[i];
-    const isGestor=cfg.tipo==='gestor';
     const isActive=es.state==='active',isDone=es.state==='done',isPaused=es.state==='paused';
-    const dotCls='etapa-dot'+(isGestor?' ea-gestor-dot':isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
-    const rowCls='etapa-row'+(isGestor?' ea-gestor':isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
+    const dotCls='etapa-dot'+(isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
+    const rowCls='etapa-row'+(isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
     let badge='';
     if(isDone)badge=`<span class="badge b-blue">✓</span>`;
-    else if(isActive&&!isGestor)badge=`<span class="badge b-green">Em andamento</span>`;
-    else if(isPaused&&!isGestor)badge=`<span class="badge b-amber">Pausada</span>`;
-    else if(isGestor&&!isDone){
-      const prevDone=i>0&&e[i-1]?.state==='done';
-      badge=prevDone?`<span class="badge" style="background:#e0e7ff;color:#4f46e5;border-color:#a5b4fc">Aguardando</span>`:
-        `<span class="badge b-gray">Bloqueada</span>`;
-    }
-    const assignedOp=es.assignedTo?USUARIOS.find(u=>u.id===es.assignedTo):null;
-    const subLabel=isGestor?'Luizão':assignedOp?(assignedOp.apelido||assignedOp.nome.split(' ')[0]):'';
+    else if(isActive)badge=`<span class="badge b-green">Em andamento</span>`;
+    else if(isPaused)badge=`<span class="badge b-amber">Pausada</span>`;
+    else if(!es.liberada&&es.assignedTo)badge=`<span class="badge b-gray" style="font-size:9px">🔒</span>`;
+    // Workers: mostra nomes atribuídos
+    const workers=es.workers?.length?es.workers:(es.assignedTo?[{userId:es.assignedTo}]:[]);
+    const opNames=workers.map(w=>USUARIOS.find(u=>u.id===w.userId)?.nome.split(' ')[0]||w.userId).join(', ');
+    const elapsed=etapaElapsed(k,i);
     return`<div class="${rowCls}" onclick="openEtapa(${i})" style="cursor:pointer">
-      <div class="${dotCls}">${isDone?'✓':isGestor?'G':''}</div>
+      <div class="${dotCls}">${isDone?'✓':''}</div>
       <div class="etapa-bar" style="background:${cfg.cor}"></div>
       <div class="etapa-info">
         <div class="etapa-nome">${cfg.nome}</div>
-        ${subLabel?`<div class="etapa-ts">${subLabel}</div>`:''}
+        ${opNames?`<div class="etapa-ts">${opNames}${elapsed>0?' · '+fmtTime(elapsed):''}</div>`:''}
       </div>
       <div class="etapa-act" style="gap:8px">${badge}<div class="arrow-btn" style="width:22px;height:22px;font-size:12px;flex-shrink:0">›</div></div>
     </div>`;
@@ -1087,6 +1087,9 @@ function updateDot(k){
 // ── P5: timer por etapa ──
 function etapaElapsed(k,i){
   const e=getEtapas(k)[i];if(!e||e.state==='pending')return 0;
+  // Multi-worker: soma todos
+  if(e.workers?.length) return Math.max(0, e.workers.reduce((s,w)=>s+workerElapsed(w),0));
+  // Legacy single-worker
   if(e.state==='active')return e.baseElapsed+(Date.now()-e.startAt)/1000;
   return e.baseElapsed||0;
 }
@@ -1102,7 +1105,7 @@ function startP5Loop(){if(!_p5Raf)_p5Raf=requestAnimationFrame(p5Loop);}
 function renderP5State(){
   const k=curKey,i=curEtapaIdx;const cfg=ETAPAS[i];
   const timerEl=$('p5-timer'),stRow=$('p5-state-row');
-  if(cfg?.tipo==='gestor'||cfg?.evento){
+  if(cfg?.evento){
     if(timerEl)timerEl.style.display='none';
     if(stRow)stRow.style.display='none';
     return;
@@ -1117,32 +1120,12 @@ function renderP5State(){
 function renderP5Ctrl(){
   const k=curKey,i=curEtapaIdx;const cfg=ETAPAS[i];
   const e=getEtapas(k)[i];const s=e?.state||'pending';
-  const isGestor=cfg?.tipo==='gestor';
-  if(isGestor){
-    if(currentUser?.role==='gestor'){
-      if(s==='done'){
-        const op=USUARIOS.find(u=>u.id===e.assignedTo);
-        const nextCfg=ETAPAS[i+1];
-        $('p5-ctrl').innerHTML=`<span style="font-size:12px;color:var(--blue);font-weight:600">✓ Validado — ${nextCfg?nextCfg.nome+' atribuída a ':''}${op?op.nome.split(' ')[0]:'operador'}</span>`;
-      }else{
-        const nextCfg=ETAPAS[i+1];
-        const nextLabel=nextCfg?nextCfg.nome:'(produto finalizado)';
-        const opOpts=USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')} — ${u.cargo}</option>`).join('');
-        $('p5-ctrl').innerHTML=`<div style="width:100%;max-width:300px;text-align:left">
-          <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Próxima etapa</div>
-          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:14px">${nextLabel}</div>
-          <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Atribuir para</div>
-          <select id="p5-op-sel" style="width:100%;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none;margin-bottom:12px"><option value="">Selecionar operador…</option>${opOpts}</select>
-          <button class="cbtn cbtn-start" style="width:100%;justify-content:center" onclick="gestorValidar()">✓ Validar e atribuir</button>
-        </div>`;
-      }
-    }else{
-      $('p5-ctrl').innerHTML=`<div style="text-align:center;padding:12px 0"><div style="font-size:28px;margin-bottom:10px">⏳</div><div style="font-size:13px;color:var(--tx2);font-weight:600">Aguardando validação do Luizão</div><div style="font-size:11px;color:var(--tx3);margin-top:4px">O coordenador irá liberar a próxima etapa</div></div>`;
-    }
-    return;
-  }
-  // Etapa de produção
-  const isMyTask=currentUser?.role==='gestor'||!e.assignedTo||e.assignedTo===currentUser?.id;
+  // Workers: suporte multi-operador
+  const workers=e.workers?.length?e.workers:(e.assignedTo?[{userId:e.assignedTo,baseElapsed:e.baseElapsed||0,startAt:e.startAt,firstStartAt:e.firstStartAt}]:[]);
+  const isGestorUser=currentUser?.role==='gestor';
+  const isMyTask=isGestorUser||!workers.length||workers.some(w=>w.userId===currentUser?.id);
+  const myW=isGestorUser?null:_myWorker(e);
+  const myActive=myW&&myW.startAt!=null;
   let h='';
 
   // ── Etapa de evento (sem cronômetro) ──
@@ -1183,51 +1166,95 @@ function renderP5Ctrl(){
     return;
   }
 
-  // ── Etapa com cronômetro (comportamento padrão) ──
+  // ── Banner de equipe (multi-worker) ──
+  let teamBanner='';
+  if(workers.length>1){
+    const names=workers.map(w=>{
+      const u=USUARIOS.find(x=>x.id===w.userId);
+      const nome=u?.nome.split(' ')[0]||w.userId;
+      const ativo=w.startAt!=null;
+      return`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${ativo?'var(--accent)':'var(--bg3)'};color:${ativo?'#fff':'var(--tx3)'}">${ativo?'●':'○'} ${esc(nome)}</span>`;
+    }).join('');
+    const totalEl=etapaElapsed(k,i);
+    teamBanner=`<div style="margin-bottom:12px;padding:10px 12px;border-radius:10px;background:var(--bg3);border:1px solid var(--bd);text-align:left">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Equipe nesta etapa</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${names}</div>
+      ${totalEl>0?`<div style="margin-top:8px;font-size:11px;color:var(--tx2)">Tempo total acumulado: <b style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(totalEl)}</b></div>`:''}
+    </div>`;
+  }
+
+  // ── Etapa com cronômetro ──
   if(s==='done'){
     h=`<div style="text-align:center;padding:10px 0">
       <div style="font-size:32px;margin-bottom:6px">✓</div>
       <div style="font-size:14px;color:var(--blue);font-weight:700">Etapa concluída</div>
     </div>`;
   } else if(!isMyTask){
-    const op=USUARIOS.find(u=>u.id===e.assignedTo);
-    h=`<div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px 0">Atribuída a <b>${op?op.nome.split(' ')[0]:'outro operador'}</b></div>`;
-  } else if(s==='pending'){
-    h=`<button class="cbtn cbtn-start cbtn-xl" onclick="p5Iniciar()">▶ Iniciar</button>`;
-  } else if(s==='active'){
+    const names=workers.map(w=>(USUARIOS.find(u=>u.id===w.userId)?.nome.split(' ')[0]||w.userId)).join(', ');
+    h=`<div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px 0">Atribuída a <b>${names||'outro operador'}</b></div>`;
+  } else if(s==='pending'&&!e.liberada&&!isGestorUser){
+    h=`<div style="text-align:center;padding:16px 0;display:flex;flex-direction:column;align-items:center;gap:10px">
+      <div style="font-size:36px">🔒</div>
+      <div style="font-size:14px;color:var(--tx2);font-weight:700">Aguardando liberação</div>
+      <div style="font-size:12px;color:var(--tx3)">O Luizão ainda não liberou esta etapa</div>
+    </div>`;
+  } else if(myActive){
+    // Meu worker está ativo
     h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
-      <button class="cbtn cbtn-pause cbtn-xl" onclick="p5Pausar()">⏸ Pausar</button>
+      ${workers.length>1?`<div style="font-size:11px;color:var(--tx2);text-align:center;margin-bottom:4px">Você está em andamento</div>`:''}
+      <button class="cbtn cbtn-pause cbtn-xl" onclick="p5Pausar()">⏸ Pausar meu tempo</button>
       <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="p5Encerrar()">■ Encerrar etapa</button>
     </div>`;
-  } else if(s==='paused'){
+  } else if(s==='active'&&myW&&!myActive){
+    // Outro está ativo mas eu estou pausado
     h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
-      <button class="cbtn cbtn-resume cbtn-xl" onclick="p5Retomar()">▶ Retomar</button>
+      <div style="font-size:11px;color:var(--tx2);text-align:center;margin-bottom:4px">Você está pausado</div>
+      <button class="cbtn cbtn-resume cbtn-xl" onclick="p5Retomar()">▶ Retomar meu tempo</button>
       <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="p5Encerrar()">■ Encerrar etapa</button>
+    </div>`;
+  } else if(s==='active'&&isGestorUser){
+    h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="p5Encerrar()">■ Encerrar etapa</button>
+    </div>`;
+  } else if(s==='paused'||s==='pending'){
+    // pending+liberada, ou paused
+    const btnLabel=s==='paused'||(myW&&myW.baseElapsed>0)?'▶ Retomar':'▶ Iniciar';
+    const action=s==='paused'||(myW&&myW.baseElapsed>0)?'p5Retomar()':'p5Iniciar()';
+    h=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      ${isGestorUser&&!e.liberada?`<button onclick="gestorLiberarEtapa('${escJs(k)}',${i},true)" style="font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;padding:7px 14px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;width:100%;margin-bottom:4px">🔓 Liberar esta etapa</button>`:''}
+      <button class="cbtn cbtn-${s==='paused'?'resume':'start'} cbtn-xl" onclick="${action}">${btnLabel}</button>
+      ${s==='paused'?`<button class="cbtn cbtn-finish" style="width:100%;justify-content:center;font-size:13px;padding:11px" onclick="p5Encerrar()">■ Encerrar etapa</button>`:''}
     </div>`;
   }
+
   // ── Histórico de tempo ──
   const elapsed=etapaElapsed(k,i);
-  const hasHistory=e.firstStartAt||e.endAt||elapsed>0;
+  const hasHistory=e.firstStartAt||e.endAt||elapsed>0||workers.some(w=>w.firstStartAt||workerElapsed(w)>0);
   let hist='';
   if(hasHistory){
-    hist+=`<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd);width:100%;text-align:left">
+    // Breakdown por worker
+    const workerRows=workers.length>1?workers.map(w=>{
+      const u=USUARIOS.find(x=>x.id===w.userId);const nome=u?.nome.split(' ')[0]||w.userId;
+      const t=workerElapsed(w);const isAtivo=w.startAt!=null;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0">
+        <span style="color:var(--tx3);display:flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:${isAtivo?'var(--accent)':'var(--bd2)'};display:inline-block"></span>${esc(nome)}</span>
+        <span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTime(t)}</span>
+      </div>`;
+    }).join(''):'';
+    hist=`<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bd);width:100%;text-align:left">
       <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Histórico de tempo</div>
-      <div style="display:flex;flex-direction:column;gap:5px">
-        ${e.firstStartAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
-          <span style="color:var(--tx3)">Início</span>
-          <span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span>
-        </div>`:''}
-        ${e.endAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">
-          <span style="color:var(--tx3)">Conclusão</span>
-          <span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span>
-        </div>`:''}
-        ${elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)">
-          <span style="color:var(--tx)">Total</span>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${workerRows}
+        ${workers.length>1&&elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)">
+          <span style="color:var(--tx)">Total equipe</span>
           <span style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(elapsed)}</span>
         </div>`:''}
+        ${e.firstStartAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px"><span style="color:var(--tx3)">Início</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span></div>`:''}
+        ${e.endAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px"><span style="color:var(--tx3)">Conclusão</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span></div>`:''}
+        ${workers.length<=1&&elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)"><span style="color:var(--tx)">Total</span><span style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(elapsed)}</span></div>`:''}
       </div>
-      ${currentUser?.role==='gestor'?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
-        <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Ajustar tempo</div>
+      ${isGestorUser?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
+        <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Ajustar tempo total</div>
         <div style="display:flex;gap:6px;align-items:center">
           <input id="p5-adj-inp" type="text" placeholder="${fmtTime(elapsed)}"
             style="flex:1;font-size:14px;font-family:'Inconsolata',monospace;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;text-align:center">
@@ -1237,11 +1264,13 @@ function renderP5Ctrl(){
       </div>`:''}
     </div>`;
   }
-  $('p5-ctrl').innerHTML=h+hist;
+  $('p5-ctrl').innerHTML=teamBanner+h+hist;
 }
 function p5Iniciar(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
-  if(e.state!=='pending')return;
+  // Permite iniciar se pending, ou se ativo (entrar como segundo worker)
+  if(e.state==='done')return;
+  const myW=_myWorker(e);if(myW&&myW.startAt!=null)return; // já estou ativo
   _miAbrir('iniciar',_getLinkaveisIniciar());
 }
 async function p5RegistrarEvento(){
@@ -1275,22 +1304,37 @@ async function p5DesfazerEvento(){
 function p5Pausar(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
   if(e.state!=='active')return;
-  const elapsed=etapaElapsed(k,i);
+  const now=Date.now();
   (_linkedKeys.length?_linkedKeys:[k]).forEach(lk=>{
     const le=getEtapas(lk)[i];if(!le||le.state!=='active')return;
-    le.baseElapsed=etapaElapsed(lk,i);le.state='paused';
-    if(!pState[lk])pState[lk]={state:'idle'};pState[lk].state='paused';
+    // Pausa só o meu worker
+    const myW=(le.workers||[]).find(w=>w.userId===currentUser?.id);
+    if(myW&&myW.startAt!=null){
+      myW.baseElapsed=(myW.baseElapsed||0)+(now-myW.startAt)/1000;
+      myW.startAt=null;
+    } else if(!le.workers?.length){
+      // legado: sem workers[], pausa a etapa toda
+      le.baseElapsed=etapaElapsed(lk,i);
+    }
+    // Se TODOS os workers estão pausados → state='paused'
+    const algumAtivo=(le.workers||[]).some(w=>w.startAt!=null);
+    if(!algumAtivo){le.state='paused';if(!pState[lk])pState[lk]={state:'idle'};pState[lk].state='paused';}
     saveProducaoState(lk);
   });
-  toast('Pausado — '+fmtTime(elapsed));renderP5State();renderP5Ctrl();updateDot(k);
+  const myElap=workerElapsed((e.workers||[]).find(w=>w.userId===currentUser?.id));
+  toast('Pausado — '+fmtTime(myElap||etapaElapsed(k,i)));
+  renderP5State();renderP5Ctrl();updateDot(k);
 }
 function p5Retomar(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
-  if(e.state!=='paused')return;
+  if(e.state!=='active'&&e.state!=='paused')return;
   const now=Date.now();
   (_linkedKeys.length?_linkedKeys:[k]).forEach(lk=>{
-    const le=getEtapas(lk)[i];if(!le||le.state!=='paused')return;
-    le.state='active';le.startAt=now;
+    const le=getEtapas(lk)[i];if(!le||le.state==='done')return;
+    const myW=(le.workers||[]).find(w=>w.userId===currentUser?.id);
+    if(myW){myW.startAt=now;}
+    else if(!le.workers?.length){le.startAt=now;} // legado
+    le.state='active';
     if(!pState[lk])pState[lk]={state:'idle'};pState[lk].state='running';
     saveProducaoState(lk);
   });
@@ -1299,13 +1343,21 @@ function p5Retomar(){
 function p5Encerrar(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
   if(e.state!=='active'&&e.state!=='paused')return;
+  const now=Date.now();
+  // Pausa meu worker antes de encerrar
+  const myW=(e.workers||[]).find(w=>w.userId===currentUser?.id);
+  if(myW&&myW.startAt!=null){myW.baseElapsed=(myW.baseElapsed||0)+(now-myW.startAt)/1000;myW.startAt=null;}
   const elapsed=etapaElapsed(k,i);
   _miElapsed=elapsed;_miFirstStartAt=e.firstStartAt;
   _p5Raf=null;
   (_linkedKeys.length?_linkedKeys:[k]).forEach(lk=>{
     const le=getEtapas(lk)[i];if(!le||le.state==='done')return;
-    le.baseElapsed=elapsed;le.state='done';le.endAt=Date.now();
+    // Pausa todos os workers restantes
+    (le.workers||[]).forEach(w=>{if(w.startAt!=null){w.baseElapsed=(w.baseElapsed||0)+(now-w.startAt)/1000;w.startAt=null;}});
+    le.state='done';le.endAt=now;
     if(!le.firstStartAt)le.firstStartAt=e.firstStartAt;
+    if(le.workers?.length)le.baseElapsed=le.workers.reduce((s,w)=>s+(w.baseElapsed||0),0);
+    else le.baseElapsed=etapaElapsed(lk,i);
     if(!pState[lk])pState[lk]={state:'idle'};pState[lk].state=derivedState(lk);
     updateDot(lk);saveProducaoState(lk,0);
   });
@@ -1313,21 +1365,6 @@ function p5Encerrar(){
   const maisItens=_getLinkaveisAplicar();
   if(maisItens.length>0){_miAbrir('aplicar',maisItens);return;}
   _miNavAposEncerrar(i);
-}
-function gestorValidar(){
-  const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
-  const opId=$('p5-op-sel')?.value;
-  if(!opId){toast('Selecione um operador para atribuir');return;}
-  e.state='done';e.endAt=Date.now();
-  const nextE=getEtapas(k)[i+1];if(nextE)nextE.assignedTo=opId;
-  if(!pState[k])pState[k]={state:'idle'};pState[k].state=derivedState(k);
-  updateDot(k);updateProgresso();
-  const op=USUARIOS.find(u=>u.id===opId);
-  const nextCfg=ETAPAS[i+1];
-  saveProducaoState(k, 0);
-  _refreshProposalCache(curProj);
-  toast('Validado ✓ — '+(nextCfg?.nome||'etapa')+' atribuída a '+(op?.nome.split(' ')[0]||opId));
-  if(i+1<ETAPAS.length)openEtapa(i+1);else openProd(curProd);
 }
 function p5AjustarTempo(){
   if(currentUser?.role!=='gestor')return;
@@ -1350,28 +1387,23 @@ function openEtapa(idx){
   if(!curProj||!curGrupo||!curProd||curKey===null)return;
   _p5Raf=null;curEtapaIdx=idx;
   const k=curKey,cfg=ETAPAS[idx],e=getEtapas(k)[idx];
-  const isGestor=cfg.tipo==='gestor';
-  $('p5-etapa-num').textContent=(isGestor?'Validação':'Etapa '+(cfg.prodIdx+1))+' de '+TOTAL_PROD;
+  $('p5-etapa-num').textContent='Etapa '+(idx+1)+' de '+TOTAL_PROD;
   $('p5-badge-dot').style.background=cfg.cor;
   $('p5-badge-nome').textContent=cfg.nome;
   renderP5State();renderP5Ctrl();_renderLinkedBadge();
-  const assignedOp=e.assignedTo?USUARIOS.find(u=>u.id===e.assignedTo):null;
-  // Renderiza sanfonas no painel P5
+  // Workers para o card info
+  const workers=e.workers?.length?e.workers:(e.assignedTo?[{userId:e.assignedTo}]:[]);
+  const opNomes=workers.map(w=>{const u=USUARIOS.find(x=>x.id===w.userId);return u?esc(u.nome):'';}).filter(Boolean);
   renderP4Right('p5-right-panel');
-  // Injeta card de Etapa como primeira sanfona
   const etapaCampos=[
     {label:'Etapa',val:esc(cfg.nome),size:13},
-    ...(isGestor?[{label:'Valida',val:esc(cfg.gestorFor),size:13}]:[]),
-    ...(isGestor&&cfg.nextProd?[{label:'Próxima',val:esc(cfg.nextProd),size:13}]:[]),
-    ...(assignedOp?[{label:'Operador',val:esc(assignedOp.nome),size:13}]:[]),
+    ...(opNomes.length?[{label:opNomes.length>1?'Equipe':'Operador',val:opNomes.join(' + '),size:13}]:[]),
     ...(e.firstStartAt?[{label:'Início',val:fmtTs(e.firstStartAt)+' '+fmtDate(e.firstStartAt),size:12,style:"font-family:'Inconsolata',monospace"}]:[]),
     ...(e.endAt?[{label:'Conclusão',val:fmtTs(e.endAt)+' '+fmtDate(e.endAt),size:12,style:"font-family:'Inconsolata',monospace"}]:[]),
   ];
   const panel=document.getElementById('p5-right-panel');
-  if(panel){
-    panel.insertAdjacentHTML('afterbegin',_sfCard('sf-etapa','Etapa atual',esc(cfg.nome),_infoRowsHtml(etapaCampos),true));
-  }
-  if(!isGestor&&e.state==='active')startP5Loop();
+  if(panel) panel.insertAdjacentHTML('afterbegin',_sfCard('sf-etapa','Etapa atual',esc(cfg.nome),_infoRowsHtml(etapaCampos),true));
+  if(e.state==='active')startP5Loop();
   const _pedNumP5=curProj.numeroPedido?.trim()||curProj.camposFormulario?.numeroPedido?.trim()||'#'+curProj.numeroProposta;
   const _p5ProdFull=itemLabel(curProd);const prodLabel=_p5ProdFull.slice(0,20)+(_p5ProdFull.length>20?'…':'');
   const etapaLabel=cfg.nome.slice(0,16)+(cfg.nome.length>16?'…':'');
@@ -2029,24 +2061,7 @@ function goToEtapa(projId,grupoId,key,etapaIdx){
   curKey=key;openEtapa(etapaIdx);
 }
 
-// ── Validações Pendentes (gestor) ──
-function getValidacoesPendentes(){
-  const pendentes=[];
-  allData.forEach(proj=>{
-    (proj.grupos||[]).forEach(grupo=>{
-      const prods=getProdutosDoGrupo(grupo,proj._id);
-      prods.forEach(prod=>{
-        const etapas=getEtapas(prod.key);
-        etapas.forEach((e,i)=>{
-          if(ETAPAS[i].tipo!=='gestor'||e.state==='done')return;
-          if(i>0&&etapas[i-1]?.state==='done')
-            pendentes.push({proj,grupo,prod,etapaIdx:i,gestorState:e,prevOpId:etapas[i-1]?.assignedTo,cfg:ETAPAS[i]});
-        });
-      });
-    });
-  });
-  return pendentes;
-}
+function getValidacoesPendentes(){return[];}
 
 let _expandedProjId=null;
 let _searchQuery='';
@@ -2085,19 +2100,18 @@ function renderP1(){
 
   const temPedido=p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim());
   const opOpts=USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('');
-  const prodStagesTotal=ETAPAS.filter(e=>e.tipo==='producao').length;
+  const prodStagesTotal=ETAPAS.length;
 
   // Build one summary object per proposal
   const projs=allData.filter(temPedido).map(proj=>{
-    let valPend=0,emAnd=0,totProds=0,prodsDone=0;
+    let emAnd=0,totProds=0,prodsDone=0;
     (proj.grupos||[]).forEach(grupo=>{
       getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
         totProds++;
         const etapas=getEtapas(prod.key);
         if(derivedState(prod.key)==='done')prodsDone++;
         etapas.forEach((e,i)=>{
-          if(ETAPAS[i].tipo==='gestor'&&e.state!=='done'&&i>0&&etapas[i-1]?.state==='done')valPend++;
-          if(ETAPAS[i].tipo==='producao'&&(e.state==='active'||e.state==='paused'))emAnd++;
+          if(e.state==='active'||e.state==='paused')emAnd++;
         });
       });
     });
@@ -2106,8 +2120,8 @@ function renderP1(){
     const cf_=proj.camposFormulario||{};
     const cidade=cf_.cidade?.trim()||cf_.cidadeObra?.trim()||cf_.clientes?.[0]?.cidade||cf_.clientes?.[0]?.municipio||'';
     const concluido=totProds>0&&prodsDone===totProds;
-    const prioridade=valPend>0?0:emAnd>0?1:concluido?3:2;
-    return{proj,pedNum,cliente,cidade,valPend,emAnd,totProds,prodsDone,concluido,prioridade};
+    const prioridade=emAnd>0?1:concluido?3:2;
+    return{proj,pedNum,cliente,cidade,emAnd,totProds,prodsDone,concluido,prioridade};
   });
 
   projs.sort((a,b)=>Number(b.pedNum)-Number(a.pedNum));
@@ -2144,13 +2158,11 @@ function renderP1(){
   }
 
   const accentFor=p=>{
-    if(p.valPend>0)return'#7c3aed';
     if(p.concluido)return'#16a34a';
     if(p.emAnd>0)return'var(--accent)';
     return'var(--bd2)';
   };
   const badgeFor=p=>{
-    if(p.valPend>0)return`<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;white-space:nowrap">⚑ ${p.valPend} validaç${p.valPend!==1?'ões':'ão'}</span>`;
     if(p.concluido)return`<span class="badge b-green" style="white-space:nowrap">✓ Concluído</span>`;
     if(p.emAnd>0)return`<span class="badge b-blue" style="white-space:nowrap">${p.emAnd} em andamento</span>`;
     return`<span class="badge b-gray" style="white-space:nowrap">Não iniciado</span>`;
@@ -2217,15 +2229,11 @@ function renderP1(){
         items.forEach(({grupo,prod})=>{
           const etapas=getEtapas(prod.key);
           const state=derivedState(prod.key);
-          const psd=etapas.filter((e,i)=>ETAPAS[i].tipo==='producao'&&e.state==='done').length;
+          const psd=etapas.filter(e=>e.state==='done').length;
           const ppct=Math.round(psd/prodStagesTotal*100);
           const sid='s_'+pi+'_'+(ri++);
 
-          // find pending gestor validation
-          let valIdx=-1;
-          etapas.forEach((e,i)=>{if(valIdx<0&&ETAPAS[i].tipo==='gestor'&&e.state!=='done'&&i>0&&etapas[i-1]?.state==='done')valIdx=i;});
-          // find active production stage
-          const actIdx=etapas.findIndex((e,i)=>ETAPAS[i].tipo==='producao'&&(e.state==='active'||e.state==='paused'));
+          const actIdx=etapas.findIndex(e=>e.state==='active'||e.state==='paused');
 
           let badge='',info='',action='',ra='var(--bd2)',rb='var(--bg)';
 
@@ -2233,21 +2241,13 @@ function renderP1(){
             badge='<span class="badge b-green" style="font-size:10px">✓ Pronto</span>';
             info='Todas as '+prodStagesTotal+' etapas concluídas';
             ra='#16a34a';rb='#f0fdf4';
-          } else if(valIdx>=0){
-            const prevOp=etapas[valIdx-1]?.assignedTo?USUARIOS.find(u=>u.id===etapas[valIdx-1].assignedTo):null;
-            badge='<span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700">⚑ Validar</span>';
-            info=(ETAPAS[valIdx].gestorFor||ETAPAS[valIdx].nome)+(prevOp?' · concluído por '+prevOp.nome.split(' ')[0]:'');
-            ra='#7c3aed';rb='#faf5ff';
-            action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
-              +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Atribuir próxima etapa a…</option>'+opOpts+'</select>'
-              +'<button class="cbtn cbtn-start" style="font-size:11px;padding:4px 10px" onclick="gestorValidarInline(\''+escJs(prod.key)+'\','+valIdx+',\''+sid+'\')">✓ Validar</button>'
-              +'</div>';
           } else if(actIdx>=0){
-            const op=etapas[actIdx].assignedTo?USUARIOS.find(u=>u.id===etapas[actIdx].assignedTo):null;
+            const ws=etapas[actIdx].workers?.length?etapas[actIdx].workers:(etapas[actIdx].assignedTo?[{userId:etapas[actIdx].assignedTo}]:[]);
+            const opNames=ws.map(w=>USUARIOS.find(u=>u.id===w.userId)?.nome.split(' ')[0]||w.userId).join(', ');
             const el2=etapaElapsed(prod.key,actIdx);
             const paused=etapas[actIdx].state==='paused';
             badge='<span class="badge '+(paused?'b-amber':'b-blue')+'" style="font-size:10px">'+(paused?'Pausada':'Em andamento')+'</span>';
-            info=ETAPAS[actIdx].nome+(op?' · '+op.nome.split(' ')[0]:'')+(el2>0?' · '+fmtTime(el2):'');
+            info=ETAPAS[actIdx].nome+(opNames?' · '+opNames:'')+(el2>0?' · '+fmtTime(el2):'');
             ra='var(--accent)';
             action='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'
               +'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Redemandar para…</option>'+opOpts+'</select>'
@@ -2255,18 +2255,23 @@ function renderP1(){
               +'</div>';
           } else {
             const e0=etapas[0];
-            if(e0.assignedTo){
-              const nextIdx=etapas.findIndex((e,i)=>ETAPAS[i].tipo==='producao'&&e.state!=='done'&&e.assignedTo);
+            if(e0.assignedTo||(e0.workers?.length)){
+              const nextIdx=etapas.findIndex((e,i)=>e.state!=='done'&&(e.assignedTo||(e.workers?.length)));
               const nextOp=nextIdx>=0?USUARIOS.find(u=>u.id===etapas[nextIdx].assignedTo):null;
               const nextNome=nextIdx>=0?ETAPAS[nextIdx].nome:'';
-              badge='<span class="badge b-gray" style="font-size:10px">Demandado</span>';
+              const nextLiberada=nextIdx>=0&&etapas[nextIdx].liberada;
+              badge='<span class="badge b-gray" style="font-size:10px">Demandado</span>'
+                +(nextIdx>=0&&!nextLiberada?'<span class="badge" style="font-size:10px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin-left:4px">🔒 Bloqueado</span>':'');
               info=nextOp?(nextNome+' → '+nextOp.nome.split(' ')[0]):(ETAPAS[0].nome+' → '+(USUARIOS.find(u=>u.id===e0.assignedTo)?.nome.split(' ')[0]||e0.assignedTo));
               action='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px">'
                 +(nextIdx>=0
                   ?'<select id="'+sid+'" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:5px 8px;border-radius:7px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none"><option value="">Redemandar para…</option>'+opOpts+'</select>'
                    +'<button class="cbtn cbtn-reopen" style="font-size:11px;padding:4px 10px;border:1px solid var(--bd)" onclick="gestorRedemandarInline(\''+escJs(prod.key)+'\','+nextIdx+',\''+sid+'\')">↺ Redemandar</button>'
+                   +(nextLiberada
+                     ?'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:4px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx3);cursor:pointer" onclick="gestorLiberarEtapa(\''+escJs(prod.key)+'\','+nextIdx+',false)">🔒 Bloquear</button>'
+                     :'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:4px 10px;border-radius:7px;border:none;background:var(--accent);color:#fff;cursor:pointer" onclick="gestorLiberarEtapa(\''+escJs(prod.key)+'\','+nextIdx+',true)">🔓 Liberar</button>')
                   :'')
-                +'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">Demandar novamente</button>'
+                +'<button style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer" onclick="abrirModalDemandar(\''+escJs(prod.key)+'\')">Redistribuir etapas</button>'
                 +'</div>';
             } else {
               badge='<span class="badge b-gray" style="font-size:10px">Não iniciado</span>';
@@ -2312,19 +2317,12 @@ function renderP1(){
     }
     // barra de seleção coletiva (só aparece quando há checkboxes marcados)
     const bulkBar=isOpen
-      ?'<div id="bulk-bar-'+p.proj._id+'" onclick="event.stopPropagation()" style="display:none;border-top:2px solid var(--accent);background:var(--accent-light);padding:10px 16px;display:none;align-items:center;gap:10px;flex-wrap:wrap">'
+      ?'<div id="bulk-bar-'+p.proj._id+'" onclick="event.stopPropagation()" style="display:none;border-top:2px solid var(--accent);background:var(--accent-light);padding:10px 16px;align-items:center;gap:10px;flex-wrap:wrap">'
         +'<span id="bulk-count-'+p.proj._id+'" style="font-size:12px;font-weight:700;color:var(--accent)">0 selecionados</span>'
         +'<button onclick="_selecionarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer">Selecionar todos</button>'
         +'<button onclick="_desmarcarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer">Desmarcar</button>'
-        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto">'
-          +'<select id="bulk-et-'+p.proj._id+'" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">'
-            +ETAPAS.map((e,i)=>e.tipo==='producao'&&i>=2?`<option value="${i}"${i===2?' selected':''}>${esc(e.nome)}</option>`:'').join('')
-          +'</select>'
-          +'<select id="bulk-op-'+p.proj._id+'" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">'
-            +'<option value="">Operador…</option>'
-            +USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}">${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('')
-          +'</select>'
-          +'<button onclick="_demandarSelecionados(\''+escJs(p.proj._id)+'\')" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap">Demandar selecionados</button>'
+        +'<div style="margin-left:auto">'
+          +'<button onclick="_demandarSelecionados(\''+escJs(p.proj._id)+'\')" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap">Distribuir etapas →</button>'
         +'</div>'
       +'</div>'
       :''
@@ -2403,25 +2401,10 @@ function renderP1(){
     pids.forEach(pid=>_updateBulkBar(pid));
   }
 }
-function gestorValidarInline(key,etapaIdx,selId){
-  const opId=$(selId)?.value;
-  if(!opId){toast('Selecione um operador para atribuir');return;}
-  const e=getEtapas(key)[etapaIdx];
-  e.state='done';e.endAt=Date.now();
-  const nextE=getEtapas(key)[etapaIdx+1];if(nextE)nextE.assignedTo=opId;
-  if(!pState[key])pState[key]={state:'idle'};pState[key].state=derivedState(key);
-  const op=USUARIOS.find(u=>u.id===opId);
-  const nextCfg=ETAPAS[etapaIdx+1];
-  saveProducaoState(key, 0);
-  _refreshProposalCache(allData.find(p=>p._id===key.split('__')[0]));
-  toast('Validado ✓ — '+(nextCfg?.nome||'produto concluído')+' atribuído a '+(op?.nome.split(' ')[0]||opId));
-  renderP1();
-}
 function gestorRedemandarInline(key,etapaIdx,selId){
   const opId=$(selId)?.value;
   if(!opId){toast('Selecione um operador para redemandar');return;}
   const e=getEtapas(key)[etapaIdx];
-  // Se estava ativa, pausa preservando o tempo acumulado
   if(e.state==='active'){e.baseElapsed=etapaElapsed(key,etapaIdx);e.state='paused';}
   e.assignedTo=opId;
   if(!pState[key])pState[key]={state:'idle'};
@@ -2432,17 +2415,30 @@ function gestorRedemandarInline(key,etapaIdx,selId){
   toast('Redemandado ✓ — '+(ETAPAS[etapaIdx]?.nome||'etapa')+' → '+(op?.nome.split(' ')[0]||opId));
   renderP1();
 }
+
+function gestorLiberarEtapa(key,etapaIdx,liberar){
+  const etapas=getEtapas(key);
+  if(!etapas[etapaIdx])return;
+  etapas[etapaIdx].liberada=liberar;
+  if(!pState[key])pState[key]={state:'idle'};
+  pState[key].state=derivedState(key);
+  saveProducaoState(key,0);
+  toast(liberar?'Etapa liberada ✓ — operador pode iniciar':'Etapa bloqueada');
+  // Se estiver na tela de timer desta etapa, re-renderiza os controles
+  if(curKey===key&&curEtapaIdx===etapaIdx) renderP5Ctrl();
+  else renderP1();
+}
 // ── MODAL DEMANDAR ──────────────────────────────────────────────
-let _dmKey=null, _dmMode=0;
+let _dmKey=null, _dmMode=0, _dmKeys=[];
 
 function abrirModalDemandar(key){
-  _dmKey=key; _dmMode=0;
+  _dmKey=key; _dmKeys=[key]; _dmMode=0;
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
 }
 function fecharModalDemandar(){
   document.getElementById('dm-overlay').style.display='none';
-  _dmKey=null; _dmMode=0;
+  _dmKey=null; _dmKeys=[]; _dmMode=0;
 }
 
 // ── Operações Avulsas ────────────────────────────────────────
@@ -2629,105 +2625,140 @@ function _opSelectHtml(id,placeholder){
   return'<select class="dm-sel" id="'+id+'"><option value="">'+placeholder+'</option>'+opts+'</select>';
 }
 
+// ── Novo modal de distribuição de etapas ──────────────────────
 function _renderModalDemandar(){
   const box=document.getElementById('dm-box');
-  const modeCard=(m,icon,title,sub)=>`
-    <div class="dm-mode-card${_dmMode===m?' selected':''}" onclick="_selMode(${m})">
-      <div class="dm-mode-icon">${icon}</div>
-      <div><div class="dm-mode-title">${title}</div><div class="dm-mode-sub">${sub}</div></div>
-    </div>`;
+  const n=_dmKeys.length;
+  const opOpts=USUARIOS.filter(u=>u.role==='operador')
+    .map(u=>`<option value="${u.id}">${esc(u.nome.split(' ').slice(0,2).join(' '))} — ${esc(u.cargo||'')}</option>`).join('');
 
-  let form='';
-  if(_dmMode===1){
-    form=`<div class="dm-form">
-      <div class="dm-form-label">Operador responsável por todas as etapas</div>
-      ${_opSelectHtml('dm-op-all','Selecione o operador…')}
-    </div>`;
-  } else if(_dmMode===2){
-    const rows=ETAPAS
-      .map((e,i)=>({e,i}))
-      .filter(({e,i})=>e.tipo==='producao'&&i>=2)
-      .map(({e,i})=>`
-        <div class="dm-etapa-row">
-          <span class="dm-etapa-label" title="${esc(e.nome)}">${esc(e.nome)}</span>
-          <select class="dm-etapa-sel" id="dm-et-${i}">
-            <option value="">Ninguém</option>
-            ${USUARIOS.filter(u=>u.role==='operador').map(u=>'<option value="'+u.id+'">'+esc(u.nome.split(' ').slice(0,2).join(' '))+'</option>').join('')}
-          </select>
-        </div>`).join('');
-    form=`<div class="dm-form">
-      <div class="dm-form-label">Atribuir operador por etapa</div>
-      ${rows}
-    </div>`;
-  } else if(_dmMode===3){
-    const etOpts=ETAPAS.map((e,i)=>e.tipo==='producao'&&i>=2?`<option value="${i}">${esc(e.nome)}</option>`:'').join('');
-    form=`<div class="dm-form">
-      <div class="dm-form-label">Escolha a etapa de início e o operador</div>
-      <select class="dm-sel" id="dm-et-start"><option value="2">Etapa: Desenho</option>${etOpts}</select>
-      ${_opSelectHtml('dm-op-start','Selecione o operador…')}
-    </div>`;
+  // Pré-carrega os assignedTos existentes (se for produto já demandado)
+  const existingAssign={};
+  const existingLiberada={};
+  if(n===1){
+    const etapas=getEtapas(_dmKeys[0]);
+    ETAPAS_PROD.slice(1).forEach((_ep,i)=>{
+      const gi=i+1;
+      existingAssign[gi]=etapas[gi]?.assignedTo||'';
+      existingLiberada[gi]=etapas[gi]?.liberada||false;
+    });
   }
 
+  const etapaRows=ETAPAS_PROD.slice(1).map((ep,i)=>{
+    const gi=i+1;
+    const selOpts=`<option value="">— não atribuído —</option>`+
+      USUARIOS.filter(u=>u.role==='operador')
+        .map(u=>`<option value="${u.id}"${existingAssign[gi]===u.id?' selected':''}>${esc(u.nome.split(' ').slice(0,2).join(' '))}</option>`).join('');
+    const libChecked=existingLiberada[gi]?' checked':'';
+    const eventoTag=ep.evento?`<span style="font-size:9px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">📋</span>`:'';
+    return`<tr style="border-top:1px solid var(--bd)">
+      <td style="padding:7px 12px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${ep.cor}"></div>
+          <span style="font-size:12px;color:var(--tx);font-weight:500">${esc(ep.nome)}${eventoTag}</span>
+        </div>
+      </td>
+      <td style="padding:5px 8px">
+        <select id="dm-et-${gi}" style="width:100%;min-width:140px;font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;padding:5px 7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);outline:none">
+          ${selOpts}
+        </select>
+      </td>
+      <td style="padding:5px 12px;text-align:center">
+        <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-size:11px;color:var(--tx2)">
+          <input type="checkbox" id="dm-lib-${gi}"${libChecked} style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
+          Liberar
+        </label>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const subtitle=n===1
+    ? (() => {
+        const k=_dmKeys[0];
+        const proj=allData.find(p=>p._id===k.split('__')[0]);
+        const grupos=(proj?.grupos||[]);
+        let label='';
+        grupos.forEach(g=>getProdutosDoGrupo(g,proj?._id||'').forEach(p=>{if(p.key===k)label=itemLabel(p);}));
+        return esc(label||k);
+      })()
+    : `${n} produtos selecionados`;
+
   box.innerHTML=`
-    <div class="modal-title">Demandar produto</div>
-    <div class="modal-sub" style="margin-bottom:16px">Escolha como demandar este item</div>
-    <div class="dm-modes">
-      ${modeCard(1,'👤','Uma pessoa — todas as etapas','O mesmo operador executa todas as etapas do produto.')}
-      ${modeCard(2,'👥','Etapas para pessoas diferentes','Escolha um operador diferente para cada etapa.')}
-      ${modeCard(3,'🎯','Escolher etapa de início','Defina por qual etapa começa e quem executa.')}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" style="margin:0">Distribuir Etapas</div>
+      <button onclick="fecharModalDemandar()" style="background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer;padding:2px 6px;line-height:1">×</button>
     </div>
-    ${form}
-    <div class="modal-actions" style="margin-top:18px">
+    <div class="modal-sub" style="margin-bottom:16px">${subtitle}</div>
+
+    <div style="display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--accent-light);border:1px solid var(--accent-bd,var(--bd));border-radius:10px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Todos para</span>
+      <select id="dm-op-all" style="flex:1;min-width:130px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 9px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">
+        <option value="">— escolher —</option>${opOpts}
+      </select>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2);cursor:pointer;white-space:nowrap">
+        <input type="checkbox" id="dm-lib-all" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer"> Liberar todas
+      </label>
+      <button onclick="_dmAplicarTodos()" style="font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap">Aplicar</button>
+    </div>
+
+    <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:18px">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--bg3)">
+          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Etapa</th>
+          <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Responsável</th>
+          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Liberar início</th>
+        </tr></thead>
+        <tbody>${etapaRows}</tbody>
+      </table>
+    </div>
+
+    <div class="modal-actions">
       <button class="cbtn cbtn-reopen" onclick="fecharModalDemandar()">Cancelar</button>
-      ${_dmMode>0?'<button class="cbtn cbtn-start" onclick="_confirmarDemandar()">→ Confirmar</button>':''}
+      <button class="cbtn cbtn-start" onclick="_confirmarDemandar()">→ Salvar distribuição</button>
     </div>`;
 }
 
-function _selMode(m){
-  _dmMode=m;
-  _renderModalDemandar();
+function _dmAplicarTodos(){
+  const opId=document.getElementById('dm-op-all')?.value;
+  const libAll=document.getElementById('dm-lib-all')?.checked||false;
+  ETAPAS_PROD.slice(1).forEach((_,i)=>{
+    const gi=i+1;
+    if(opId){const s=document.getElementById('dm-et-'+gi);if(s)s.value=opId;}
+    const c=document.getElementById('dm-lib-'+gi);if(c)c.checked=libAll;
+  });
 }
 
 function _confirmarDemandar(){
-  const key=_dmKey;
-  const etapas=getEtapas(key);
+  const keys=_dmKeys;if(!keys.length)return;
+  const assignments=[];
+  ETAPAS_PROD.slice(1).forEach((_,i)=>{
+    const gi=i+1;
+    const opId=document.getElementById('dm-et-'+gi)?.value||'';
+    const liberada=document.getElementById('dm-lib-'+gi)?.checked||false;
+    assignments.push({gi,opId,liberada});
+  });
+  if(!assignments.some(a=>a.opId)){toast('Atribua pelo menos uma etapa a um operador');return;}
   const now=Date.now();
-  // marca supervisor e validação como concluídos
-  etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
-  etapas[0].firstStartAt=now;etapas[0].startAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
-  etapas[1].state='done';etapas[1].endAt=now;
-
-  if(_dmMode===1){
-    const opId=document.getElementById('dm-op-all')?.value;
-    if(!opId){toast('Selecione um operador');return;}
-    ETAPAS.forEach((e,i)=>{if(e.tipo==='producao'&&i>=2&&etapas[i])etapas[i].assignedTo=opId;});
-    const op=USUARIOS.find(u=>u.id===opId);
-    toast('Demandado ✓ — todas as etapas para '+(op?.nome.split(' ')[0]||opId));
-
-  } else if(_dmMode===2){
-    let algum=false;
-    ETAPAS.forEach((e,i)=>{
-      if(e.tipo==='producao'&&i>=2){
-        const opId=document.getElementById('dm-et-'+i)?.value;
-        if(opId&&etapas[i]){etapas[i].assignedTo=opId;algum=true;}
-      }
+  keys.forEach(key=>{
+    const etapas=getEtapas(key);
+    // Etapa 0 = Supervisor (auto-concluída ao demandar)
+    etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
+    etapas[0].firstStartAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
+    assignments.forEach(({gi,opId,liberada})=>{
+      if(!etapas[gi])return;
+      if(opId)etapas[gi].assignedTo=opId;
+      etapas[gi].liberada=liberada;
     });
-    if(!algum){toast('Atribua pelo menos uma etapa');return;}
-    toast('Demandado ✓ — etapas atribuídas');
-
-  } else if(_dmMode===3){
-    const etIdx=parseInt(document.getElementById('dm-et-start')?.value||'2')||2;
-    const opId=document.getElementById('dm-op-start')?.value;
-    if(!opId){toast('Selecione um operador');return;}
-    if(etapas[etIdx])etapas[etIdx].assignedTo=opId;
-    const op=USUARIOS.find(u=>u.id===opId);
-    toast('Demandado ✓ — '+(ETAPAS[etIdx]?.nome||'etapa')+' → '+(op?.nome.split(' ')[0]||opId));
-  }
-
-  if(!pState[key])pState[key]={state:'idle'};
-  pState[key].state=derivedState(key);
-  saveProducaoState(key,0);
-  _refreshProposalCache(curProj);
+    if(!pState[key])pState[key]={state:'idle'};
+    pState[key].state=derivedState(key);
+    _saveLocal(key);
+  });
+  const proj=allData.find(p=>p._id===keys[0].split('__')[0]);
+  if(proj)_refreshProposalCache(proj);
+  _lastSyncTs=Date.now();
+  if(keys.length===1)saveProducaoState(keys[0],0);else _saveBatch(keys);
+  keys.forEach(k=>_selectedKeys.delete(k));
+  toast('Distribuição salva — '+keys.length+' produto'+(keys.length!==1?'s':''));
   fecharModalDemandar();
   renderP1();
 }
@@ -2829,33 +2860,11 @@ function _toggleAreaChk(areaKey,projId){
   _updateBulkBar(projId);
 }
 function _demandarSelecionados(projId){
-  const opId=document.getElementById('bulk-op-'+projId)?.value;
-  if(!opId){toast('Selecione um operador');return;}
-  const etIdx=parseInt(document.getElementById('bulk-et-'+projId)?.value||'2')||2;
-  // Usa _selectedKeys para capturar produtos de áreas fechadas também
-  // (querySelectorAll perde checkboxes de áreas não renderizadas no DOM)
   const keys=[..._selectedKeys].filter(k=>k.startsWith(projId+'__'));
   if(!keys.length){toast('Nenhum produto selecionado');return;}
-  const now=Date.now();
-  keys.forEach(key=>{
-    const etapas=getEtapas(key);
-    etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
-    etapas[0].firstStartAt=now;etapas[0].startAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
-    etapas[1].state='done';etapas[1].endAt=now;
-    if(etapas[etIdx])etapas[etIdx].assignedTo=opId;
-    if(!pState[key])pState[key]={state:'idle'};
-    pState[key].state=derivedState(key);
-    _saveLocal(key);
-  });
-  const op=USUARIOS.find(u=>u.id===opId);
-  keys.forEach(key=>_selectedKeys.delete(key));
-  _refreshProposalCache(allData.find(p=>p._id===projId));
-  // Marca o timestamp ANTES de salvar para que o poll não busque dados
-  // desatualizados do MongoDB enquanto o batch ainda não completou
-  _lastSyncTs=Date.now();
-  _saveBatch(keys);
-  toast('Demandado ✓ — '+keys.length+' produto'+(keys.length!==1?'s':'')+' → '+(op?.nome.split(' ')[0]||opId));
-  renderP1();
+  _dmKey=null; _dmKeys=keys; _dmMode=0;
+  _renderModalDemandar();
+  document.getElementById('dm-overlay').style.display='flex';
 }
 
 function gestorDemandarInline(key,selId,etSelId){
@@ -3985,7 +3994,7 @@ let _miFirstStartAt=0;
 
 function _getLinkaveisIniciar(){
   if(!curProj||curEtapaIdx==null||!currentUser)return[];
-  if(ETAPAS[curEtapaIdx]?.tipo==='gestor'||ETAPAS[curEtapaIdx]?.evento)return[];
+  if(ETAPAS[curEtapaIdx]?.evento)return[];
   // Todos os produtos do pedido com essa etapa pendente (não só os atribuídos ao operador)
   const result=[];
   (curProj.grupos||[]).forEach(grupo=>{
@@ -4093,15 +4102,28 @@ function _miFechar(){
 function _p5IniciarMulti(keys){
   const now=Date.now();const i=curEtapaIdx;
   keys.forEach(k=>{
-    const e=getEtapas(k)[i];if(!e||e.state!=='pending')return;
-    e.state='active';e.startAt=now;e.firstStartAt=now;e.baseElapsed=0;
+    const e=getEtapas(k)[i];if(!e||e.state==='done')return;
+    if(!e.workers)e.workers=[];
+    // Não duplicar worker
+    let myW=e.workers.find(w=>w.userId===currentUser?.id);
+    if(myW&&myW.startAt!=null)return; // já ativo
+    if(!myW){
+      myW={userId:currentUser?.id,baseElapsed:0,startAt:null,firstStartAt:null};
+      e.workers.push(myW);
+    }
+    myW.startAt=now;
+    if(!myW.firstStartAt)myW.firstStartAt=now;
+    if(!e.firstStartAt)e.firstStartAt=now;
+    e.state='active';
     if(!e.assignedTo&&currentUser)e.assignedTo=currentUser.id;
     if(!pState[k])pState[k]={state:'idle'};pState[k].state='running';
     saveProducaoState(k);
   });
   _linkedKeys=[...new Set(keys)];
   const n=_linkedKeys.length;
-  toast('Etapa iniciada'+(n>1?' para '+n+' itens':''));
+  const outros=keys.filter(k=>k!==curKey);
+  const jaTinhaParceiros=(getEtapas(curKey)[i].workers||[]).length>1;
+  toast(jaTinhaParceiros?'Você entrou na equipe desta etapa ✓':'Etapa iniciada'+(n>1?' para '+n+' itens':''));
   renderP5State();renderP5Ctrl();updateDot(curKey);startP5Loop();_renderLinkedBadge();
 }
 
@@ -4109,7 +4131,10 @@ function _p5AplicarTempoMulti(keys){
   const i=curEtapaIdx;const now=Date.now();
   keys.forEach(k=>{
     const e=getEtapas(k)[i];if(!e||e.state==='done')return;
-    e.baseElapsed=_miElapsed;e.state='done';e.endAt=now;
+    (e.workers||[]).forEach(w=>{if(w.startAt!=null){w.baseElapsed=(w.baseElapsed||0)+(now-w.startAt)/1000;w.startAt=null;}});
+    if(e.workers?.length)e.baseElapsed=e.workers.reduce((s,w)=>s+(w.baseElapsed||0),0);
+    else e.baseElapsed=_miElapsed;
+    e.state='done';e.endAt=now;
     if(!e.firstStartAt)e.firstStartAt=_miFirstStartAt||(now-_miElapsed*1000);
     if(!e.assignedTo&&currentUser)e.assignedTo=currentUser.id;
     if(!pState[k])pState[k]={state:'idle'};pState[k].state=derivedState(k);
