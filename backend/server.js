@@ -10,7 +10,11 @@ const app  = express();
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ──────────────────────────────────────────────
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+}));
 app.use(express.json({ limit: '2mb' }));
 
 // ── Mongoose ────────────────────────────────────────────────

@@ -1859,7 +1859,7 @@ async function _excluirUsuario(userId,nomeDisplay){
     });
     if(r.ok){toast('Usuário excluído ✓');_renderModalUsuarios();}
     else{const d=await r.json();toast(d.error||'Erro ao excluir');}
-  }catch(e){toast('Sem conexão');}
+  }catch(e){toast('Erro: '+e.message);}
 }
 async function _limparTodasDemandas(){
   if(!confirm('Remover TODAS as demandas e estados de produção? Esta ação não pode ser desfeita.'))return;
