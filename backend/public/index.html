@@ -2423,7 +2423,7 @@ function renderP1(){
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.cliente)+'</div>'
           +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cidade)+'</div>':'')
-          +'<div style="font-size:10px;color:var(--tx3);margin-top:2px;white-space:nowrap">Prazo: '+esc(p.prazoPrevisto||'—')+'</div>'
+          +(function(){var d=p.prazoPrevisto;return '<div style="font-size:10px;color:var(--tx3);margin-top:2px;white-space:nowrap">Prazo: '+esc(d?d.split('-').reverse().join('/'):'—')+'</div>';}())
         +'</div>'
         +'<div class="proj-right-block" style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
           +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
@@ -3111,7 +3111,7 @@ function renderP4Right(panelId){
     {label:'Ambiente',val:esc(curGrupo.ambiente||'—'),size:13},
     {label:'Pedido',val:esc(pedNum)+' — '+esc(cliente),size:13},
     ...obraFields.map(f=>({label:f.label,val:esc(f.val),size:13})),
-    {label:'Prazo Previsto',val:esc(cf.prazoPrevisto||'—'),size:13},
+    {label:'Prazo Previsto',val:esc(cf.prazoPrevisto?cf.prazoPrevisto.split('-').reverse().join('/'):'—'),size:13},
   ];
   // card Insumos
   const insumos=curProd.insumos||[];
