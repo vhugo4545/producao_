@@ -49,10 +49,18 @@ const obsSchema = new mongoose.Schema({
   text: { type: String, maxlength: 2000 },
 }, { _id: false });
 
+const attachmentRefSchema = new mongoose.Schema({
+  attId: { type: String, maxlength: 64 },
+  name:  { type: String, maxlength: 256 },
+  type:  { type: String, maxlength: 128 },
+  size:  { type: Number, default: 0 },
+}, { _id: false });
+
 const comentarioSchema = new mongoose.Schema({
-  text:     { type: String, required: true, maxlength: 2000 },
-  ts:       { type: Number, required: true },
-  userName: { type: String, maxlength: 64, default: '' },
+  text:        { type: String, default: '', maxlength: 2000 },
+  ts:          { type: Number, required: true },
+  userName:    { type: String, maxlength: 64, default: '' },
+  attachments: { type: [attachmentRefSchema], default: [] },
 }, { _id: false });
 
 const producaoSchema = new mongoose.Schema({
@@ -63,6 +71,16 @@ const producaoSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const Producao = mongoose.model('Producao', producaoSchema);
+
+// ── Schema Attachment (armazenamento de arquivos) ────────────
+const attachmentSchema = new mongoose.Schema({
+  name: { type: String, maxlength: 256, default: 'arquivo' },
+  type: { type: String, maxlength: 128, default: 'application/octet-stream' },
+  size: { type: Number, default: 0 },
+  data: { type: String },   // base64 data URL
+  ts:   { type: Number, default: Date.now },
+});
+const Attachment = mongoose.model('Attachment', attachmentSchema);
 
 // ── Schema ProposalCache ─────────────────────────────────────
 // Armazena snapshot das propostas ativas (com numeroPedido)
@@ -486,16 +504,63 @@ app.get('/api/producao/:key/comentarios', async (req, res) => {
   }
 });
 
+// POST /api/attachments — upload de arquivo (base64, máx 10MB)
+app.post('/api/attachments', express.json({ limit: '15mb' }), requireAuth, async (req, res) => {
+  const { name, type, size, data } = req.body;
+  if (!data || typeof data !== 'string') return res.status(400).json({ error: 'Dados obrigatórios' });
+  if (!size || size > 10 * 1024 * 1024) return res.status(400).json({ error: 'Arquivo muito grande (máx 10MB)' });
+  try {
+    const att = await Attachment.create({
+      name: (name || 'arquivo').toString().slice(0, 256),
+      type: (type || 'application/octet-stream').toString().slice(0, 128),
+      size: Number(size) || 0,
+      data,
+      ts: Date.now(),
+    });
+    res.status(201).json({ id: att._id.toString(), name: att.name, type: att.type, size: att.size });
+  } catch (e) {
+    console.error('[POST /api/attachments]', e.message);
+    res.status(500).json({ error: 'Erro ao salvar anexo' });
+  }
+});
+
+// GET /api/attachments/:id — serve o arquivo (ID age como capability token)
+app.get('/api/attachments/:id', async (req, res) => {
+  try {
+    const att = await Attachment.findById(req.params.id).lean();
+    if (!att) return res.status(404).json({ error: 'Não encontrado' });
+    const b64 = att.data.replace(/^data:[^;]+;base64,/, '');
+    const buf = Buffer.from(b64, 'base64');
+    res.set('Content-Type', att.type || 'application/octet-stream');
+    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(att.name || 'file')}"`);
+    res.set('Cache-Control', 'private, max-age=604800');
+    res.send(buf);
+  } catch (e) {
+    console.error('[GET /api/attachments/:id]', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // POST /api/producao/:key/comentarios
 app.post('/api/producao/:key/comentarios', async (req, res) => {
   const key = req.params.key;
   if (!validateKey(key)) return res.status(400).json({ error: 'Chave inválida' });
-  const { text, userName } = req.body;
-  if (!text || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Texto obrigatório' });
+  const { text, userName, attachments } = req.body;
+  const txt = (text || '').toString().trim().slice(0, 2000);
+  const attArr = Array.isArray(attachments)
+    ? attachments.slice(0, 10).map(a => ({
+        attId: String(a.id || a.attId || '').slice(0, 64),
+        name:  String(a.name || '').slice(0, 256),
+        type:  String(a.type || '').slice(0, 128),
+        size:  Number(a.size) || 0,
+      })).filter(a => a.attId)
+    : [];
+  if (!txt && !attArr.length) return res.status(400).json({ error: 'Conteúdo obrigatório' });
   const comentario = {
-    text: text.trim().slice(0, 2000),
+    text: txt,
     ts: Date.now(),
     userName: (userName || '').toString().slice(0, 64),
+    attachments: attArr,
   };
   try {
     await Producao.findOneAndUpdate(
