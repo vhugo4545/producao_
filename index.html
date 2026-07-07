@@ -2626,44 +2626,72 @@ function _opSelectHtml(id,placeholder){
 }
 
 // ── Novo modal de distribuição de etapas ──────────────────────
+// Gera o HTML de uma linha de operador dentro do container de uma etapa
+function _dmOpRow(gi,uid,removable){
+  const opOpts=USUARIOS.filter(u=>u.role==='operador')
+    .map(u=>`<option value="${u.id}"${uid===u.id?' selected':''}>${esc(u.nome.split(' ').slice(0,2).join(' '))}</option>`).join('');
+  const rmBtn=removable
+    ?`<button type="button" onclick="this.parentElement.remove()" title="Remover"
+        style="flex-shrink:0;width:22px;height:22px;border-radius:6px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>`
+    :'<div style="width:22px;flex-shrink:0"></div>';
+  return`<div style="display:flex;gap:4px;align-items:center">
+    <select class="dm-op-sel" style="flex:1;min-width:120px;font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;padding:5px 7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);outline:none">
+      <option value="">— não atribuído —</option>${opOpts}
+    </select>
+    ${rmBtn}
+  </div>`;
+}
+// Adiciona linha de operador extra em uma etapa
+function _dmAddOp(gi){
+  const c=document.getElementById('dm-ops-'+gi);if(!c)return;
+  // Torna o primeiro item removível também
+  const first=c.querySelector('div');
+  if(first){const rm=first.querySelector('[title="Remover"]');if(!rm){const btn=document.createElement('button');btn.type='button';btn.title='Remover';btn.innerHTML='×';btn.style.cssText='flex-shrink:0;width:22px;height:22px;border-radius:6px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx3);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center';btn.onclick=()=>btn.parentElement.remove();const ph=first.querySelector('[style*="width:22px"]');if(ph)ph.replaceWith(btn);}}
+  c.insertAdjacentHTML('beforeend',_dmOpRow(gi,'',true));
+}
+
 function _renderModalDemandar(){
   const box=document.getElementById('dm-box');
   const n=_dmKeys.length;
   const opOpts=USUARIOS.filter(u=>u.role==='operador')
     .map(u=>`<option value="${u.id}">${esc(u.nome.split(' ').slice(0,2).join(' '))} — ${esc(u.cargo||'')}</option>`).join('');
 
-  // Pré-carrega os assignedTos existentes (se for produto já demandado)
-  const existingAssign={};
+  // Pré-carrega workers existentes (se for produto já demandado)
+  const existingWorkers={};
   const existingLiberada={};
   if(n===1){
     const etapas=getEtapas(_dmKeys[0]);
     ETAPAS_PROD.slice(1).forEach((_ep,i)=>{
-      const gi=i+1;
-      existingAssign[gi]=etapas[gi]?.assignedTo||'';
-      existingLiberada[gi]=etapas[gi]?.liberada||false;
+      const gi=i+1;const e=etapas[gi];
+      existingWorkers[gi]=e?.workers?.length
+        ? e.workers.map(w=>w.userId)
+        : (e?.assignedTo?[e.assignedTo]:[]);
+      existingLiberada[gi]=e?.liberada||false;
     });
   }
 
   const etapaRows=ETAPAS_PROD.slice(1).map((ep,i)=>{
     const gi=i+1;
-    const selOpts=`<option value="">— não atribuído —</option>`+
-      USUARIOS.filter(u=>u.role==='operador')
-        .map(u=>`<option value="${u.id}"${existingAssign[gi]===u.id?' selected':''}>${esc(u.nome.split(' ').slice(0,2).join(' '))}</option>`).join('');
+    const uids=existingWorkers[gi]?.length?existingWorkers[gi]:[''];
+    const firstRow=_dmOpRow(gi,uids[0],false);
+    const extraRows=uids.slice(1).map(uid=>_dmOpRow(gi,uid,true)).join('');
     const libChecked=existingLiberada[gi]?' checked':'';
     const eventoTag=ep.evento?`<span style="font-size:9px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">📋</span>`:'';
     return`<tr style="border-top:1px solid var(--bd)">
-      <td style="padding:7px 12px">
-        <div style="display:flex;align-items:center;gap:7px">
+      <td style="padding:7px 12px;vertical-align:top">
+        <div style="display:flex;align-items:center;gap:7px;padding-top:6px">
           <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${ep.cor}"></div>
           <span style="font-size:12px;color:var(--tx);font-weight:500">${esc(ep.nome)}${eventoTag}</span>
         </div>
       </td>
-      <td style="padding:5px 8px">
-        <select id="dm-et-${gi}" style="width:100%;min-width:140px;font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;padding:5px 7px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);outline:none">
-          ${selOpts}
-        </select>
+      <td style="padding:5px 8px;vertical-align:top">
+        <div id="dm-ops-${gi}" style="display:flex;flex-direction:column;gap:3px">
+          ${firstRow}${extraRows}
+        </div>
+        <button type="button" onclick="_dmAddOp(${gi})"
+          style="margin-top:4px;font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;letter-spacing:.02em">+ add operador</button>
       </td>
-      <td style="padding:5px 12px;text-align:center">
+      <td style="padding:5px 12px;text-align:center;vertical-align:top;padding-top:12px">
         <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-size:11px;color:var(--tx2)">
           <input type="checkbox" id="dm-lib-${gi}"${libChecked} style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
           Liberar
@@ -2705,7 +2733,7 @@ function _renderModalDemandar(){
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="background:var(--bg3)">
           <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Etapa</th>
-          <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Responsável</th>
+          <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Responsáveis</th>
           <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Liberar início</th>
         </tr></thead>
         <tbody>${etapaRows}</tbody>
@@ -2723,7 +2751,8 @@ function _dmAplicarTodos(){
   const libAll=document.getElementById('dm-lib-all')?.checked||false;
   ETAPAS_PROD.slice(1).forEach((_,i)=>{
     const gi=i+1;
-    if(opId){const s=document.getElementById('dm-et-'+gi);if(s)s.value=opId;}
+    // Atualiza o primeiro select de cada container
+    if(opId){const s=document.querySelector('#dm-ops-'+gi+' .dm-op-sel');if(s)s.value=opId;}
     const c=document.getElementById('dm-lib-'+gi);if(c)c.checked=libAll;
   });
 }
@@ -2733,20 +2762,24 @@ function _confirmarDemandar(){
   const assignments=[];
   ETAPAS_PROD.slice(1).forEach((_,i)=>{
     const gi=i+1;
-    const opId=document.getElementById('dm-et-'+gi)?.value||'';
+    const opIds=Array.from(document.querySelectorAll('#dm-ops-'+gi+' .dm-op-sel'))
+      .map(s=>s.value).filter(Boolean);
     const liberada=document.getElementById('dm-lib-'+gi)?.checked||false;
-    assignments.push({gi,opId,liberada});
+    assignments.push({gi,opIds,liberada});
   });
-  if(!assignments.some(a=>a.opId)){toast('Atribua pelo menos uma etapa a um operador');return;}
+  if(!assignments.some(a=>a.opIds.length)){toast('Atribua pelo menos uma etapa a um operador');return;}
   const now=Date.now();
   keys.forEach(key=>{
     const etapas=getEtapas(key);
     // Etapa 0 = Supervisor (auto-concluída ao demandar)
     etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
     etapas[0].firstStartAt=now;etapas[0].endAt=now;etapas[0].baseElapsed=0;
-    assignments.forEach(({gi,opId,liberada})=>{
+    assignments.forEach(({gi,opIds,liberada})=>{
       if(!etapas[gi])return;
-      if(opId)etapas[gi].assignedTo=opId;
+      if(opIds.length){
+        etapas[gi].assignedTo=opIds[0];
+        etapas[gi].workers=opIds.map(uid=>({userId:uid,baseElapsed:0,startAt:null,firstStartAt:null}));
+      }
       etapas[gi].liberada=liberada;
     });
     if(!pState[key])pState[key]={state:'idle'};
@@ -2758,7 +2791,8 @@ function _confirmarDemandar(){
   _lastSyncTs=Date.now();
   if(keys.length===1)saveProducaoState(keys[0],0);else _saveBatch(keys);
   keys.forEach(k=>_selectedKeys.delete(k));
-  toast('Distribuição salva — '+keys.length+' produto'+(keys.length!==1?'s':''));
+  const totalWorkers=assignments.reduce((s,a)=>s+a.opIds.length,0);
+  toast('Distribuição salva — '+keys.length+' produto'+(keys.length!==1?'s':'')+' · '+totalWorkers+' atribuição'+(totalWorkers!==1?'s':''));
   fecharModalDemandar();
   renderP1();
 }
