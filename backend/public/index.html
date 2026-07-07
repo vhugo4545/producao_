@@ -3109,6 +3109,7 @@ function renderP4Right(panelId){
     {label:'Ambiente',val:esc(curGrupo.ambiente||'—'),size:13},
     {label:'Pedido',val:esc(pedNum)+' — '+esc(cliente),size:13},
     ...obraFields.map(f=>({label:f.label,val:esc(f.val),size:13})),
+    {label:'Prazo Previsto',val:esc(cf.prazoPrevisto||'—'),size:13},
   ];
   // card Insumos
   const insumos=curProd.insumos||[];
