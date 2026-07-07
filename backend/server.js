@@ -287,6 +287,17 @@ app.post('/api/users/:id/reset-password', requireAuth, requireGestor, async (req
   }
 });
 
+// ── DELETE /api/users/:id — exclui usuário (gestor) ──────────
+app.delete('/api/users/:id', requireAuth, requireGestor, async (req, res) => {
+  try {
+    const r = await Usuario.deleteOne({ id: req.params.id });
+    if (!r.deletedCount) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // ── DELETE /api/producao/all — limpa todas demandas (gestor) ──
 app.delete('/api/producao/all', requireAuth, requireGestor, async (_req, res) => {
   try {

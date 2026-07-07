@@ -1779,7 +1779,10 @@ async function _renderModalUsuarios(){
                 ${u.firstAccess?'<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;font-weight:600;margin-left:4px">1º acesso</span>':''}
               </td>
               <td style="padding:10px 14px;text-align:right">
-                <button onclick="_resetSenha('${escJs(u.id)}','${escJs(u.apelido||u.nome.split(' ')[0])}')" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">Resetar senha</button>
+                <div style="display:flex;gap:6px;justify-content:flex-end">
+                  <button onclick="_resetSenha('${escJs(u.id)}','${escJs(u.apelido||u.nome.split(' ')[0])}')" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">Resetar senha</button>
+                  ${u.id!=='luizao'?`<button onclick="_excluirUsuario('${escJs(u.id)}','${escJs(u.apelido||u.nome.split(' ')[0])}')" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--red-bd,#fca5a5);background:var(--bg);color:var(--red,#dc2626);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600">Excluir</button>`:''}
+                </div>
               </td>
             </tr>`).join('')}
           </tbody>
@@ -1846,6 +1849,16 @@ async function _resetSenha(userId,nomeDisplay){
     });
     if(r.ok){toast('Senha redefinida ✓');_renderModalUsuarios();}
     else toast('Erro ao redefinir senha');
+  }catch(e){toast('Sem conexão');}
+}
+async function _excluirUsuario(userId,nomeDisplay){
+  if(!confirm(`Excluir o usuário "${nomeDisplay}"? Esta ação não pode ser desfeita.`))return;
+  try{
+    const r=await fetch(PROD_API+'/api/users/'+encodeURIComponent(userId),{
+      method:'DELETE',headers:{'Authorization':'Bearer '+_authToken}
+    });
+    if(r.ok){toast('Usuário excluído ✓');_renderModalUsuarios();}
+    else{const d=await r.json();toast(d.error||'Erro ao excluir');}
   }catch(e){toast('Sem conexão');}
 }
 async function _limparTodasDemandas(){
