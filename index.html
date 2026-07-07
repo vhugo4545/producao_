@@ -2131,9 +2131,11 @@ function getValidacoesPendentes(){return[];}
 
 let _expandedProjId=null;
 let _searchQuery='';
+let _sortP1='pedido'; // 'pedido' | 'prazo_asc' | 'prazo_desc'
 let _p3ProdCache={}; // key→prod, para onclick seguro em P3
 function togglePedido(projId){_expandedProjId=(_expandedProjId===projId)?null:projId;renderP1();}
 function searchP1(val){_searchQuery=(val||'').toLowerCase().trim();_expandedProjId=null;renderP1();}
+function setP1Sort(v){_sortP1=v;renderP1();}
 function gestorAbrirProduto(projId,grupoId,prodKey){
   curProj=allData.find(p=>p._id===projId);if(!curProj)return;
   curGrupo=(curProj.grupos||[]).find(g=>g._id===grupoId);if(!curGrupo)return;
@@ -2191,7 +2193,23 @@ function renderP1(){
     return{proj,pedNum,cliente,cidade,emAnd,totProds,prodsDone,concluido,prioridade,prazoPrevisto};
   });
 
-  projs.sort((a,b)=>Number(b.pedNum)-Number(a.pedNum));
+  if(_sortP1==='prazo_asc'){
+    projs.sort((a,b)=>{
+      if(!a.prazoPrevisto&&!b.prazoPrevisto)return 0;
+      if(!a.prazoPrevisto)return 1;
+      if(!b.prazoPrevisto)return -1;
+      return a.prazoPrevisto<b.prazoPrevisto?-1:a.prazoPrevisto>b.prazoPrevisto?1:0;
+    });
+  }else if(_sortP1==='prazo_desc'){
+    projs.sort((a,b)=>{
+      if(!a.prazoPrevisto&&!b.prazoPrevisto)return 0;
+      if(!a.prazoPrevisto)return 1;
+      if(!b.prazoPrevisto)return -1;
+      return b.prazoPrevisto<a.prazoPrevisto?-1:b.prazoPrevisto>a.prazoPrevisto?1:0;
+    });
+  }else{
+    projs.sort((a,b)=>Number(b.pedNum)-Number(a.pedNum));
+  }
 
   // ── Filtro de busca ──
   const q=_searchQuery;
@@ -2202,7 +2220,9 @@ function renderP1(){
   ):projs).filter(p=>!_hiddenPedidos.has(p.proj._id));
 
   // Barra de busca (sempre renderizada no topo)
-  const searchBar=`<div style="position:sticky;top:0;z-index:50;background:var(--bg);padding-bottom:12px;margin-bottom:2px"><div style="position:relative">
+  const _sortBtnStyle=(v)=>`cursor:pointer;border:1px solid ${_sortP1===v?'var(--accent)':'var(--bd)'};background:${_sortP1===v?'var(--accent)':'var(--bg2)'};color:${_sortP1===v?'#fff':'var(--tx3)'};border-radius:7px;padding:5px 10px;font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;white-space:nowrap;transition:all .15s`;
+  const searchBar=`<div style="position:sticky;top:0;z-index:50;background:var(--bg);padding-bottom:12px;margin-bottom:2px">
+  <div style="position:relative">
     <div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:15px;pointer-events:none">🔍</div>
     <input id="p1-search" type="text" value="${q.replace(/"/g,'&quot;')}"
       placeholder="Buscar por pedido, cliente ou cidade…"
@@ -2210,7 +2230,14 @@ function renderP1(){
       style="width:100%;box-sizing:border-box;padding:11px 14px 11px 38px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);color:var(--tx);outline:none;transition:border-color .15s;box-shadow:var(--shadow)"
       onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'">
     ${q?`<button onclick="searchP1('')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:4px">✕</button>`:''}
-  </div></div>`;
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+    <span style="font-size:11px;color:var(--tx3);font-weight:600;flex-shrink:0">Ordenar:</span>
+    <button onclick="setP1Sort('pedido')" style="${_sortBtnStyle('pedido')}">N° Pedido</button>
+    <button onclick="setP1Sort('prazo_asc')" style="${_sortBtnStyle('prazo_asc')}">Prazo ↑</button>
+    <button onclick="setP1Sort('prazo_desc')" style="${_sortBtnStyle('prazo_desc')}">Prazo ↓</button>
+  </div>
+  </div>`;
 
   if(!filtered.length){
     const aindaCarregando=!q&&allData.length<(_totalPropostas||allData.length+1);
