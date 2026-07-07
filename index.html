@@ -3154,7 +3154,7 @@ function _carregarComentarios(){
 }
 
 function _attHtml(a){
-  const url=PROD_API+'/api/attachments/'+a.attId;
+  const url=PROD_API+'/api/attachments/'+(a.attId||a.id);
   const isImg=a.type?.startsWith('image/');
   const isVid=a.type?.startsWith('video/');
   const isPdf=a.type==='application/pdf';

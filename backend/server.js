@@ -15,7 +15,11 @@ app.use(cors({
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
 }));
-app.use(express.json({ limit: '2mb' }));
+// Limite maior para upload de anexos (base64 ~1.37× o tamanho original)
+app.use((req, res, next) => {
+  const limit = req.path === '/api/attachments' ? '15mb' : '2mb';
+  express.json({ limit })(req, res, next);
+});
 
 // ── Mongoose ────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
@@ -505,10 +509,10 @@ app.get('/api/producao/:key/comentarios', async (req, res) => {
 });
 
 // POST /api/attachments — upload de arquivo (base64, máx 10MB)
-app.post('/api/attachments', express.json({ limit: '15mb' }), requireAuth, async (req, res) => {
+app.post('/api/attachments', requireAuth, async (req, res) => {
   const { name, type, size, data } = req.body;
   if (!data || typeof data !== 'string') return res.status(400).json({ error: 'Dados obrigatórios' });
-  if (!size || size > 10 * 1024 * 1024) return res.status(400).json({ error: 'Arquivo muito grande (máx 10MB)' });
+  if (typeof size !== 'number' || size > 10 * 1024 * 1024) return res.status(400).json({ error: 'Arquivo muito grande (máx 10MB)' });
   try {
     const att = await Attachment.create({
       name: (name || 'arquivo').toString().slice(0, 256),
