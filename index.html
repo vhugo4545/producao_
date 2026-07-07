@@ -2958,7 +2958,7 @@ function renderP4Right(panelId){
   // monta sanfonas
   panel.innerHTML=
     _sfCard('sf-prod','Produto',esc(itemLabel(curProd)),_infoRowsHtml(prodCampos),true)
-    +_sfCard('sf-ins','Insumos',insCnt+' item'+(insCnt!==1?'s':''),insHtml,false)
+    +_sfCard('sf-ins','Insumos',insCnt+' item'+(insCnt!==1?'s':''),insHtml,insCnt>0)
     +_sfCard('sf-obs','Observações','Comentários internos',_comentariosHtml(),true);
   // marca elementos legados para compatibilidade
   const dummy=document.createElement('div');dummy.style.display='none';
