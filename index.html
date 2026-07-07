@@ -2488,16 +2488,38 @@ function gestorLiberarEtapa(key,etapaIdx,liberar){
   else renderP1();
 }
 // ── MODAL DEMANDAR ──────────────────────────────────────────────
-let _dmKey=null, _dmMode=0, _dmKeys=[];
+let _dmKey=null, _dmMode=0, _dmKeys=[], _dmStep=0, _dmStepData={};
 
 function abrirModalDemandar(key){
-  _dmKey=key; _dmKeys=[key]; _dmMode=0;
+  _dmKey=key; _dmKeys=[key]; _dmMode=0; _dmStep=0; _dmStepData={};
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
 }
 function fecharModalDemandar(){
   document.getElementById('dm-overlay').style.display='none';
-  _dmKey=null; _dmKeys=[]; _dmMode=0;
+  _dmKey=null; _dmKeys=[]; _dmMode=0; _dmStep=0; _dmStepData={};
+}
+function _dmGetLabel(key){
+  const proj=allData.find(p=>p._id===key.split('__')[0]);
+  let label='';
+  (proj?.grupos||[]).forEach(g=>getProdutosDoGrupo(g,proj._id).forEach(p=>{if(p.key===key)label=itemLabel(p);}));
+  return label||key;
+}
+function _dmSaveStep(){
+  const key=_dmKeys[_dmStep];
+  const data=[];
+  ETAPAS_PROD.slice(1).forEach((_,i)=>{
+    const gi=i+1;
+    const opIds=Array.from(document.querySelectorAll('#dm-ops-'+gi+' .dm-op-sel')).map(s=>s.value).filter(Boolean);
+    const liberada=document.getElementById('dm-lib-'+gi)?.checked||false;
+    data.push({gi,opIds,liberada});
+  });
+  _dmStepData[key]=data;
+}
+function _dmNavStep(dir){
+  _dmSaveStep();
+  _dmStep=Math.max(0,Math.min(_dmKeys.length-1,_dmStep+dir));
+  _renderModalDemandar();
 }
 
 // ── Operações Avulsas ────────────────────────────────────────
@@ -2712,19 +2734,20 @@ function _dmAddOp(gi){
 function _renderModalDemandar(){
   const box=document.getElementById('dm-box');
   const n=_dmKeys.length;
+  const key=_dmKeys[_dmStep];
   const opOpts=USUARIOS.filter(u=>u.role==='operador')
     .map(u=>`<option value="${u.id}">${esc(u.nome.split(' ').slice(0,2).join(' '))} — ${esc(u.cargo||'')}</option>`).join('');
 
-  // Pré-carrega workers existentes (se for produto já demandado)
+  // Pré-carrega workers: de _dmStepData se já visitado, senão de pEtapas
   const existingWorkers={};
   const existingLiberada={};
-  if(n===1){
-    const etapas=getEtapas(_dmKeys[0]);
+  if(_dmStepData[key]){
+    _dmStepData[key].forEach(({gi,opIds,liberada})=>{existingWorkers[gi]=opIds;existingLiberada[gi]=liberada;});
+  } else {
+    const etapas=getEtapas(key);
     ETAPAS_PROD.slice(1).forEach((_ep,i)=>{
       const gi=i+1;const e=etapas[gi];
-      existingWorkers[gi]=e?.workers?.length
-        ? e.workers.map(w=>w.userId)
-        : (e?.assignedTo?[e.assignedTo]:[]);
+      existingWorkers[gi]=e?.workers?.length?e.workers.map(w=>w.userId):(e?.assignedTo?[e.assignedTo]:[]);
       existingLiberada[gi]=e?.liberada||false;
     });
   }
@@ -2759,26 +2782,40 @@ function _renderModalDemandar(){
     </tr>`;
   }).join('');
 
-  const subtitle=n===1
-    ? (() => {
-        const k=_dmKeys[0];
-        const proj=allData.find(p=>p._id===k.split('__')[0]);
-        const grupos=(proj?.grupos||[]);
-        let label='';
-        grupos.forEach(g=>getProdutosDoGrupo(g,proj?._id||'').forEach(p=>{if(p.key===k)label=itemLabel(p);}));
-        return esc(label||k);
-      })()
-    : `${n} produtos selecionados`;
+  const prodLabel=esc(_dmGetLabel(key));
+
+  // Wizard: indicador de passo quando multiplos produtos
+  const wizardHeader=n>1?`
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Produto ${_dmStep+1} de ${n}</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          ${_dmKeys.map((_,i)=>`<div style="width:${i===_dmStep?24:8}px;height:8px;border-radius:4px;background:${i===_dmStep?'var(--accent)':i<_dmStep?'var(--green)':'var(--bd)'};transition:all .2s"></div>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:var(--tx);line-height:1.3">${prodLabel}</div>
+    </div>`
+  :`<div class="modal-sub" style="margin-bottom:16px">${prodLabel}</div>`;
+
+  const isLast=_dmStep===n-1;
+  const footerBtns=n===1
+    ?`<button class="cbtn cbtn-start" onclick="_dmConfirmarTudo()">→ Salvar distribuição</button>`
+    :`<div style="display:flex;gap:8px">
+        ${_dmStep>0?`<button class="cbtn" onclick="_dmNavStep(-1)" style="font-size:12px;padding:8px 16px">← Anterior</button>`:''}
+        ${isLast
+          ?`<button class="cbtn cbtn-start" onclick="_dmConfirmarTudo()">✓ Salvar tudo</button>`
+          :`<button class="cbtn cbtn-start" onclick="_dmNavStep(1)">Próximo →</button>`}
+      </div>`;
 
   box.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="modal-title" style="margin:0">Distribuir Etapas</div>
       <button onclick="fecharModalDemandar()" style="background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer;padding:2px 6px;line-height:1">×</button>
     </div>
-    <div class="modal-sub" style="margin-bottom:16px">${subtitle}</div>
+    ${wizardHeader}
 
     <div style="display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--accent-light);border:1px solid var(--accent-bd,var(--bd));border-radius:10px;margin-bottom:14px;flex-wrap:wrap">
-      <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Todos para</span>
+      <span style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Todas para</span>
       <select id="dm-op-all" style="flex:1;min-width:130px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 9px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">
         <option value="">— escolher —</option>${opOpts}
       </select>
@@ -2801,7 +2838,7 @@ function _renderModalDemandar(){
 
     <div class="modal-actions">
       <button class="cbtn cbtn-reopen" onclick="fecharModalDemandar()">Cancelar</button>
-      <button class="cbtn cbtn-start" onclick="_confirmarDemandar()">→ Salvar distribuição</button>
+      ${footerBtns}
     </div>`;
 }
 
@@ -2816,19 +2853,17 @@ function _dmAplicarTodos(){
   });
 }
 
-function _confirmarDemandar(){
+function _dmConfirmarTudo(){
+  // Salva o passo atual antes de processar tudo
+  _dmSaveStep();
   const keys=_dmKeys;if(!keys.length)return;
-  const assignments=[];
-  ETAPAS_PROD.slice(1).forEach((_,i)=>{
-    const gi=i+1;
-    const opIds=Array.from(document.querySelectorAll('#dm-ops-'+gi+' .dm-op-sel'))
-      .map(s=>s.value).filter(Boolean);
-    const liberada=document.getElementById('dm-lib-'+gi)?.checked||false;
-    assignments.push({gi,opIds,liberada});
-  });
-  if(!assignments.some(a=>a.opIds.length)){toast('Atribua pelo menos uma etapa a um operador');return;}
+  // Verifica se ao menos um produto tem alguma atribuição
+  const temAtribuicao=keys.some(k=>(_dmStepData[k]||[]).some(a=>a.opIds.length));
+  if(!temAtribuicao){toast('Atribua pelo menos uma etapa a um operador');return;}
   const now=Date.now();
+  let totalWorkers=0;
   keys.forEach(key=>{
+    const assignments=_dmStepData[key]||[];
     const etapas=getEtapas(key);
     // Etapa 0 = Supervisor (auto-concluída ao demandar)
     etapas[0].state='done';etapas[0].assignedTo=currentUser?.id||'luizao';
@@ -2838,6 +2873,7 @@ function _confirmarDemandar(){
       if(opIds.length){
         etapas[gi].assignedTo=opIds[0];
         etapas[gi].workers=opIds.map(uid=>({userId:uid,baseElapsed:0,startAt:null,firstStartAt:null}));
+        totalWorkers+=opIds.length;
       }
       etapas[gi].liberada=liberada;
     });
@@ -2850,7 +2886,6 @@ function _confirmarDemandar(){
   _lastSyncTs=Date.now();
   if(keys.length===1)saveProducaoState(keys[0],0);else _saveBatch(keys);
   keys.forEach(k=>_selectedKeys.delete(k));
-  const totalWorkers=assignments.reduce((s,a)=>s+a.opIds.length,0);
   toast('Distribuição salva — '+keys.length+' produto'+(keys.length!==1?'s':'')+' · '+totalWorkers+' atribuição'+(totalWorkers!==1?'s':''));
   fecharModalDemandar();
   renderP1();
@@ -2955,7 +2990,7 @@ function _toggleAreaChk(areaKey,projId){
 function _demandarSelecionados(projId){
   const keys=[..._selectedKeys].filter(k=>k.startsWith(projId+'__'));
   if(!keys.length){toast('Nenhum produto selecionado');return;}
-  _dmKey=null; _dmKeys=keys; _dmMode=0;
+  _dmKey=null; _dmKeys=keys; _dmMode=0; _dmStep=0; _dmStepData={};
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
 }
