@@ -503,6 +503,12 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 
   /* ctrl-row do timer: cada botão ocupa metade */
   .cbtn{min-width:calc(50% - 4px)}
+
+  /* pedido card header: separa info do bloco direito */
+  .proj-hdr-inn{gap:8px 10px;padding:10px 12px !important}
+  .proj-divider{display:none}
+  .proj-right-block{width:100%;justify-content:space-between}
+  .proj-rm-btn{font-size:10px !important;padding:2px 7px !important}
 }
 
 @media(max-width:420px){
@@ -2388,27 +2394,29 @@ function renderP1(){
     return'<div style="border-radius:12px;overflow:hidden;border:1px solid '+(isOpen?accent:'var(--bd)')+';box-shadow:var(--shadow)">'
       +'<div style="display:flex;align-items:stretch;cursor:pointer;background:var(--bg2)" onclick="togglePedido(\''+p.proj._id+'\')">'
       +'<div style="width:5px;background:'+accent+';flex-shrink:0"></div>'
-      +'<div style="flex:1;padding:14px 16px;display:flex;align-items:center;gap:16px;min-width:0">'
-      +'<div style="flex-shrink:0;text-align:center;min-width:68px">'
-      +'<div style="line-height:1">'+fmtPedNum(p.pedNum)+'</div>'
-      +'<div style="font-size:9px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em">Pedido</div>'
-      +'</div>'
-      +'<div style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:14px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cliente)+'</div>'
-      +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px">'+esc(p.cidade)+'</div>':'')
-      +'</div>'
-      +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
-      +badgeFor(p)
-      +(p.totProds>0?'<div style="display:flex;align-items:center;gap:6px">'
-        +'<div style="width:80px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden">'
-        +'<div style="width:'+pct+'%;height:100%;background:'+accent+';border-radius:2px"></div>'
+      +'<div class="proj-hdr-inn" style="flex:1;padding:12px 14px;display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:wrap">'
+        +'<div style="flex-shrink:0;text-align:center">'
+          +'<div style="line-height:1">'+fmtPedNum(p.pedNum)+'</div>'
+          +'<div style="font-size:9px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em">Pedido</div>'
         +'</div>'
-        +'<div style="font-size:10px;color:var(--tx3);white-space:nowrap">'+p.prodsDone+'/'+p.totProds+'</div>'
-        +'</div>':'')
-      +'</div>'
-      +'<div style="flex-shrink:0;color:var(--tx3);font-size:13px;width:18px;text-align:center">'+(isOpen?'▲':'▼')+'</div>'
-      +'<button onclick="event.stopPropagation();excluirPedido(\''+escJs(p.proj._id)+'\')" title="Remover pedido" style="flex-shrink:0;font-size:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;border:1px solid var(--red-bd);background:transparent;color:var(--tx3);cursor:pointer;padding:3px 8px;border-radius:6px;transition:all .15s;letter-spacing:.01em" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\';this.style.borderColor=\'var(--red)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--tx3)\';this.style.borderColor=\'var(--red-bd)\'">Remover</button>'
+        +'<div class="proj-divider" style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.cliente)+'</div>'
+          +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cidade)+'</div>':'')
+        +'</div>'
+        +'<div class="proj-right-block" style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+          +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
+            +badgeFor(p)
+            +(p.totProds>0?'<div style="display:flex;align-items:center;gap:5px">'
+              +'<div style="width:64px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden">'
+              +'<div style="width:'+pct+'%;height:100%;background:'+accent+';border-radius:2px"></div>'
+              +'</div>'
+              +'<div style="font-size:10px;color:var(--tx3);white-space:nowrap">'+p.prodsDone+'/'+p.totProds+'</div>'
+              +'</div>':'')
+          +'</div>'
+          +'<div style="color:var(--tx3);font-size:13px;width:16px;text-align:center;flex-shrink:0">'+(isOpen?'▲':'▼')+'</div>'
+          +'<button onclick="event.stopPropagation();excluirPedido(\''+escJs(p.proj._id)+'\')" title="Remover pedido" class="proj-rm-btn" style="flex-shrink:0;font-size:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;border:1px solid var(--red-bd);background:transparent;color:var(--tx3);cursor:pointer;padding:3px 8px;border-radius:6px;transition:all .15s;letter-spacing:.01em;white-space:nowrap" onmouseover="this.style.background=\'var(--red-bg)\';this.style.color=\'var(--red)\';this.style.borderColor=\'var(--red)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--tx3)\';this.style.borderColor=\'var(--red-bd)\'">Remover</button>'
+        +'</div>'
       +'</div>'
       +'</div>'
       +rows
