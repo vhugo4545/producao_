@@ -376,6 +376,16 @@ function validateKey(key) {
   return true;
 }
 
+function sanitizeWorkers(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 20).map(w => ({
+    userId:       w.userId       ? String(w.userId).slice(0, 64)       : null,
+    baseElapsed:  Math.max(0, Math.min(99999999, Number(w.baseElapsed) || 0)),
+    startAt:      w.startAt      ? Number(w.startAt)      : null,
+    firstStartAt: w.firstStartAt ? Number(w.firstStartAt) : null,
+  })).filter(w => w.userId);
+}
+
 function sanitizeEtapas(raw) {
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, MAX_ETAPAS).map(e => ({
@@ -385,6 +395,8 @@ function sanitizeEtapas(raw) {
     firstStartAt: e.firstStartAt ? Number(e.firstStartAt) : null,
     endAt:        e.endAt        ? Number(e.endAt)         : null,
     assignedTo:   e.assignedTo   ? String(e.assignedTo).slice(0, 64) : null,
+    liberada:     Boolean(e.liberada),
+    workers:      sanitizeWorkers(e.workers),
   }));
 }
 
