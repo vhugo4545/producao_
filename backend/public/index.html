@@ -1475,7 +1475,7 @@ function updateProgresso(){
 
 // Extrai os "produtos" de um grupo — o item com descricao_utilizacao = "Produto Acabado"
 // Se não houver, agrupa os insumos pelo tipo e usa o nome do grupo como produto único
-function _isInstalacao(nome){return /instala[çc]a[oõ]/i.test(nome||'');}
+function _isInstalacao(nome){return /instala[çc][aã][oõ]/i.test(nome||'')||/instala/i.test(nome||'');}
 function getProdutosDoGrupo(grupo,propId){
   const itens=grupo.itens||[];
   // Tenta achar o item "Produto Acabado" de cada sub-produto
