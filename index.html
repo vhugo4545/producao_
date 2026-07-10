@@ -1475,20 +1475,24 @@ function updateProgresso(){
 
 // Extrai os "produtos" de um grupo — o item com descricao_utilizacao = "Produto Acabado"
 // Se não houver, agrupa os insumos pelo tipo e usa o nome do grupo como produto único
+function _isInstalacao(nome){return /instala[çc]a[oõ]/i.test(nome||'');}
 function getProdutosDoGrupo(grupo,propId){
   const itens=grupo.itens||[];
   // Tenta achar o item "Produto Acabado" de cada sub-produto
   const acabados=itens.filter(i=>i.descricao_utilizacao==='Produto Acabado'&&i.nome_produto);
   if(acabados.length>0){
-    return acabados.map((i,idx)=>({
-      nome:i.nome_produto,
-      itemNum:idx+1,
-      key:prodKey(propId,grupo._id,i.nome_produto),
-      obs:i.formula_custo||'',
-      insumos:itens.filter(it=>it._id!==i._id&&it.nome_produto&&it.quantidade>0),
-    }));
+    return acabados
+      .filter(i=>!_isInstalacao(i.nome_produto))
+      .map((i,idx)=>({
+        nome:i.nome_produto,
+        itemNum:idx+1,
+        key:prodKey(propId,grupo._id,i.nome_produto),
+        obs:i.formula_custo||'',
+        insumos:itens.filter(it=>it._id!==i._id&&it.nome_produto&&it.quantidade>0),
+      }));
   }
-  // Fallback: o grupo inteiro é um produto
+  // Fallback: o grupo inteiro é um produto — oculta se for instalação
+  if(_isInstalacao(grupo.nome))return[];
   return [{
     nome:grupo.nome,
     itemNum:1,
@@ -1608,6 +1612,7 @@ function openGrupo(grupoId){
       <div class="grupo-info">
         <div class="grupo-nome">${esc(itemLabel(prod))}</div>
         <div class="grupo-amb">${insCnt} insumo${insCnt!==1?'s':''}</div>
+        ${grupo.previsaoEntrega?`<div class="grupo-amb" style="margin-top:2px">📅 ${grupo.previsaoEntrega.split('-').reverse().join('/')}</div>`:''}
       </div>
       <div class="dot ${state}" id="dot-${esc(k)}"></div>
       <div class="sm-timer ${state==='idle'?'':state}" id="sm-${esc(k)}">${state==='idle'?'':doneCount+'/'+ETAPAS.length}</div>
@@ -1905,12 +1910,16 @@ async function _resetSenha(userId,nomeDisplay){
 async function _excluirUsuario(userId,nomeDisplay){
   if(!confirm(`Excluir o usuário "${nomeDisplay}"? Esta ação não pode ser desfeita.`))return;
   try{
-    const r=await fetch(PROD_API+'/api/users/'+encodeURIComponent(userId),{
-      method:'DELETE',headers:{'Authorization':'Bearer '+_authToken}
+    const r=await fetch(PROD_API+'/api/users/'+encodeURIComponent(userId)+'/excluir',{
+      method:'POST',headers:{'Authorization':'Bearer '+_authToken}
     });
     if(r.ok){toast('Usuário excluído ✓');_renderModalUsuarios();}
-    else{const d=await r.json();toast(d.error||'Erro ao excluir');}
-  }catch(e){toast('Erro: '+e.message);}
+    else{
+      let msg='Erro ao excluir';
+      try{const d=await r.json();msg=d.error||msg;}catch{}
+      toast(msg);
+    }
+  }catch(e){toast('Erro de conexão');}
 }
 async function _limparTodasDemandas(){
   if(!confirm('Remover TODAS as demandas e estados de produção? Esta ação não pode ser desfeita.'))return;
@@ -3136,6 +3145,7 @@ function renderP4Right(panelId){
     ...(curProd.obs?[{label:'Descrição',val:esc(curProd.obs),size:12,style:'line-height:1.6;white-space:pre-line;color:var(--tx2)'}]:[]),
     {label:'Grupo',val:esc(curGrupo.nome),size:13},
     {label:'Ambiente',val:esc(curGrupo.ambiente||'—'),size:13},
+    {label:'Previsão de Entrega',val:esc(curGrupo.previsaoEntrega?curGrupo.previsaoEntrega.split('-').reverse().join('/'):'—'),size:13},
     {label:'Pedido',val:esc(pedNum)+' — '+esc(cliente),size:13},
     ...obraFields.map(f=>({label:f.label,val:esc(f.val),size:13})),
     {label:'Prazo Previsto',val:esc(cf.prazoPrevisto?cf.prazoPrevisto.split('-').reverse().join('/'):'—'),size:13},
