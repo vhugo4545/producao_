@@ -3801,10 +3801,11 @@ async function _pollProductionStates(){
       if(!doc.key||!Array.isArray(doc.etapas))return;
       // Não sobrescreve keys com save pendente (evita race condition pós-demanda)
       if(_saveTimer[doc.key])return;
-      // Não sobrescreve o item que o usuário está ativamente cronometrando
+      // Não sobrescreve se EU mesmo estou cronometrando (startAt ativo)
       if(curKey===doc.key&&curEtapaIdx!=null){
         const e=pEtapas[doc.key]?.[curEtapaIdx];
-        if(e?.state==='active'||e?.state==='paused')return;
+        const myW=_myWorker(e);
+        if((e?.state==='active'||e?.state==='paused')&&myW?.startAt!=null)return;
       }
       pEtapas[doc.key]=doc.etapas;
       pState[doc.key]={state:derivedState(doc.key)};
