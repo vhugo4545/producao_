@@ -829,9 +829,21 @@ app.get('/api/propostas', async (req, res) => {
 
 // ── Frontend estático ────────────────────────────────────────
 const PUBLIC = path.join(__dirname, 'public');
-app.use(express.static(PUBLIC, { etag: false, maxAge: 0 }));
+app.use(express.static(PUBLIC, {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
 app.get('*', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(PUBLIC, 'index.html'));
 });
 
