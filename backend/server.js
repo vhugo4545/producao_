@@ -333,12 +333,22 @@ app.delete('/api/users/:id', requireAuth, requireGestor, async (req, res) => {
   }
 });
 
-// ── POST /api/users/:id/excluir — fallback para proxies que bloqueiam DELETE
-app.post('/api/users/:id/excluir', requireAuth, requireGestor, async (req, res) => {
+// ── POST /api/users/:mongoId/excluir — exclui pelo _id do MongoDB
+app.post('/api/users/:mongoId/excluir', requireAuth, requireGestor, async (req, res) => {
   try {
-    const r = await Usuario.deleteOne({ id: req.params.id });
+    const r = await Usuario.deleteOne({ _id: req.params.mongoId, id: { $ne: 'luizao' } });
     if (!r.deletedCount) return res.status(404).json({ error: 'Usuário não encontrado' });
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ── POST /api/users/excluir-inativos — remove todos os usuários inativos
+app.post('/api/users/excluir-inativos', requireAuth, requireGestor, async (_req, res) => {
+  try {
+    const r = await Usuario.deleteMany({ ativo: false, id: { $ne: 'luizao' } });
+    res.json({ ok: true, deleted: r.deletedCount });
   } catch (e) {
     res.status(500).json({ error: 'Erro interno' });
   }
