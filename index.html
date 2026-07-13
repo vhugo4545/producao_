@@ -1612,7 +1612,7 @@ function openGrupo(grupoId){
       <div class="grupo-info">
         <div class="grupo-nome">${esc(itemLabel(prod))}</div>
         <div class="grupo-amb">${insCnt} insumo${insCnt!==1?'s':''}</div>
-        ${grupo.previsaoEntrega?`<div class="grupo-amb" style="margin-top:2px">📅 ${grupo.previsaoEntrega.split('-').reverse().join('/')}</div>`:''}
+        ${grupo.parametros?.previsaoEntrega?`<div class="grupo-amb" style="margin-top:2px">📅 ${grupo.parametros.previsaoEntrega.split('-').reverse().join('/')}</div>`:''}
       </div>
       <div class="dot ${state}" id="dot-${esc(k)}"></div>
       <div class="sm-timer ${state==='idle'?'':state}" id="sm-${esc(k)}">${state==='idle'?'':doneCount+'/'+ETAPAS.length}</div>
@@ -2407,7 +2407,7 @@ function renderP1(){
                 +'</div>'
                 +(info?'<div style="font-size:11px;color:var(--tx3);line-height:1.4">'+esc(info)+'</div>':'')
                 +opChips
-                +(grupo.previsaoEntrega?'<div style="font-size:10px;color:var(--tx3);margin-top:4px">📅 Entrega: <b>'+grupo.previsaoEntrega.split('-').reverse().join('/')+'</b></div>':'')
+                +(grupo.parametros?.previsaoEntrega?'<div style="font-size:10px;color:var(--tx3);margin-top:4px">📅 Entrega: <b>'+grupo.parametros.previsaoEntrega.split('-').reverse().join('/')+'</b></div>':'')
               +'</div>'
               +'<div style="flex-shrink:0;text-align:right">'
                 +'<div style="font-size:11px;font-family:\'Inconsolata\',monospace;font-weight:600;color:var(--tx2);margin-bottom:4px">'+psd+' / '+prodStagesTotal+'</div>'
@@ -3147,7 +3147,7 @@ function renderP4Right(panelId){
     ...(curProd.obs?[{label:'Descrição',val:esc(curProd.obs),size:12,style:'line-height:1.6;white-space:pre-line;color:var(--tx2)'}]:[]),
     {label:'Grupo',val:esc(curGrupo.nome),size:13},
     {label:'Ambiente',val:esc(curGrupo.ambiente||'—'),size:13},
-    {label:'Previsão de Entrega',val:esc(curGrupo.previsaoEntrega?curGrupo.previsaoEntrega.split('-').reverse().join('/'):'—'),size:13},
+    {label:'Previsão de Entrega',val:esc(curGrupo.parametros?.previsaoEntrega?curGrupo.parametros.previsaoEntrega.split('-').reverse().join('/'):'—'),size:13},
     {label:'Pedido',val:esc(pedNum)+' — '+esc(cliente),size:13},
     ...obraFields.map(f=>({label:f.label,val:esc(f.val),size:13})),
     {label:'Prazo Previsto',val:esc(cf.prazoPrevisto?cf.prazoPrevisto.split('-').reverse().join('/'):'—'),size:13},
