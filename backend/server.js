@@ -26,6 +26,16 @@ mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('[db] MongoDB conectado');
     await seedUsuarios().catch(err => console.error('[seed] Erro:', err.message));
+    // Força atualização do TTL index do ProposalCache (índice antigo pode ter TTL de 2h)
+    try {
+      await mongoose.connection.db.command({
+        collMod: 'proposalcaches',
+        index: { keyPattern: { syncedAt: 1 }, expireAfterSeconds: 604800 }
+      });
+      console.log('[db] TTL ProposalCache atualizado para 7 dias');
+    } catch (e) {
+      console.warn('[db] collMod ProposalCache:', e.message);
+    }
   })
   .catch(err => { console.error('[db] Falha na conexão:', err.message); process.exit(1); });
 
@@ -88,14 +98,14 @@ const Attachment = mongoose.model('Attachment', attachmentSchema);
 
 // ── Schema ProposalCache ─────────────────────────────────────
 // Armazena snapshot das propostas ativas (com numeroPedido)
-// TTL de 2h — Mongo apaga automaticamente após esse tempo
+// TTL de 7 dias — operadores precisam acessar tarefas mesmo sem gestor online
 const proposalCacheSchema = new mongoose.Schema({
   proposalId:   { type: String, required: true, unique: true, maxlength: 64 },
   numeroPedido: { type: String, maxlength: 64, default: '' },
   data:         { type: mongoose.Schema.Types.Mixed, required: true },
   syncedAt:     { type: Date, default: Date.now },
 }, { timestamps: true });
-proposalCacheSchema.index({ syncedAt: 1 }, { expireAfterSeconds: 7200 }); // TTL 2h
+proposalCacheSchema.index({ syncedAt: 1 }, { expireAfterSeconds: 604800 }); // TTL 7 dias
 const ProposalCache = mongoose.model('ProposalCache', proposalCacheSchema);
 
 // ── Schema OperacaoAvulsa ────────────────────────────────────
