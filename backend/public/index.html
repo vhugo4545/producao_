@@ -925,20 +925,20 @@ const USUARIOS=[
 const ETAPAS_PROD=[
   {nome:'Supervisor de Produção',cor:'#fca5a5'},
   {nome:'Desenho',cor:'#e5e7eb'},
-  {nome:'Solicitar materiais no estoque',cor:'#fde68a',evento:true},
+  {nome:'Solicitar materiais no estoque',cor:'#fde68a',evento:true,semDemandar:true},
   {nome:'Corte',cor:'#e5e7eb'},
   {nome:'Pré-solda',cor:'#fca5a5'},
   {nome:'Acabamento',cor:'#e5e7eb'},
   {nome:'Montagem',cor:'#e5e7eb'},
   {nome:'Acabamento final',cor:'#e5e7eb'},
-  {nome:'Enviado para pintura (se tiver)',cor:'#e5e7eb',evento:true},
-  {nome:'Receb. da pintura - pronto p/ inst.',cor:'#e5e7eb',evento:true},
-  {nome:'Pronto - agendar início instalação',cor:'#e5e7eb'},
+  {nome:'Enviado para pintura (se tiver)',cor:'#e5e7eb',evento:true,semDemandar:true},
+  {nome:'Receb. da pintura - pronto p/ inst.',cor:'#e5e7eb',evento:true,semDemandar:true},
+  {nome:'Pronto - agendar início instalação',cor:'#e5e7eb',semDemandar:true},
   {nome:'Instalação / Entrega estrutura',cor:'#d8b4fe'},
-  {nome:'Aguardando vidro',cor:'#e5e7eb',evento:true},
+  {nome:'Aguardando vidro',cor:'#e5e7eb',evento:true,semDemandar:true},
   {nome:'Instalação vidro',cor:'#fde68a'},
-  {nome:'Manutenção',cor:'#e5e7eb'},
-  {nome:'100% da instalação finalizada',cor:'#bbf7d0',evento:true},
+  {nome:'Manutenção',cor:'#e5e7eb',semDemandar:true},
+  {nome:'100% da instalação finalizada',cor:'#bbf7d0',evento:true,semDemandar:true},
 ];
 // 32 etapas: cada etapa de produção seguida de validação do Luizão
 const ETAPAS=ETAPAS_PROD.map((e,i)=>({...e,tipo:'producao',prodIdx:i}));
@@ -1480,13 +1480,14 @@ function updateProgresso(){
 // Extrai os "produtos" de um grupo — o item com descricao_utilizacao = "Produto Acabado"
 // Se não houver, agrupa os insumos pelo tipo e usa o nome do grupo como produto único
 function _isInstalacao(nome){return /instala[çc][aã][oõ]/i.test(nome||'')||/instala/i.test(nome||'');}
+function _isFaturamentoDireto(nome){return /faturamento direto/i.test(nome||'');}
 function getProdutosDoGrupo(grupo,propId){
   const itens=grupo.itens||[];
   // Tenta achar o item "Produto Acabado" de cada sub-produto
   const acabados=itens.filter(i=>i.descricao_utilizacao==='Produto Acabado'&&i.nome_produto);
   if(acabados.length>0){
     return acabados
-      .filter(i=>!_isInstalacao(i.nome_produto))
+      .filter(i=>!_isInstalacao(i.nome_produto)&&!_isFaturamentoDireto(i.nome_produto))
       .map((i,idx)=>({
         nome:i.nome_produto,
         itemNum:idx+1,
@@ -1495,8 +1496,8 @@ function getProdutosDoGrupo(grupo,propId){
         insumos:itens.filter(it=>it._id!==i._id&&it.nome_produto&&it.quantidade>0),
       }));
   }
-  // Fallback: o grupo inteiro é um produto — oculta se for instalação
-  if(_isInstalacao(grupo.nome))return[];
+  // Fallback: o grupo inteiro é um produto — oculta se for instalação ou faturamento direto
+  if(_isInstalacao(grupo.nome)||_isFaturamentoDireto(grupo.nome))return[];
   return [{
     nome:grupo.nome,
     itemNum:1,
@@ -2579,8 +2580,9 @@ function _dmGetLabel(key){
 function _dmSaveStep(){
   const key=_dmKeys[_dmStep];
   const data=[];
-  ETAPAS_PROD.slice(1).forEach((_,i)=>{
+  ETAPAS_PROD.slice(1).forEach((ep,i)=>{
     const gi=i+1;
+    if(ep.semDemandar) return; // não sobrescreve estado de etapas que não são demandáveis
     const opIds=Array.from(document.querySelectorAll('#dm-ops-'+gi+' .dm-op-sel')).map(s=>s.value).filter(Boolean);
     const liberada=document.getElementById('dm-lib-'+gi)?.checked||false;
     data.push({gi,opIds,liberada});
@@ -2825,6 +2827,7 @@ function _renderModalDemandar(){
 
   const etapaRows=ETAPAS_PROD.slice(1).map((ep,i)=>{
     const gi=i+1;
+    if(ep.semDemandar) return '';
     const uids=existingWorkers[gi]?.length?existingWorkers[gi]:[''];
     const firstRow=_dmOpRow(gi,uids[0],false);
     const extraRows=uids.slice(1).map(uid=>_dmOpRow(gi,uid,true)).join('');
