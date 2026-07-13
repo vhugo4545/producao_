@@ -1101,6 +1101,7 @@ function renderEtapas(){
   $('etapas-progress').textContent=doneCount+' / '+TOTAL_PROD;
   $('etapas-body').innerHTML=e.map((es,i)=>{
     const cfg=ETAPAS[i];
+    if(cfg.semDemandar) return '';
     const isActive=es.state==='active',isDone=es.state==='done',isPaused=es.state==='paused';
     const dotCls='etapa-dot'+(isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
     const rowCls='etapa-row'+(isActive?' ea-active':isDone?' ea-done':isPaused?' ea-paused':'');
