@@ -312,6 +312,16 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 .comt-att-file{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);text-decoration:none;color:var(--tx2);font-size:11px;max-width:200px;transition:border-color .15s}
 .comt-att-file:hover{border-color:var(--accent);color:var(--accent)}
 .comt-att-icon{font-size:17px;flex-shrink:0}
+#att-vw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px}
+#att-vw-overlay.open{display:flex}
+#att-vw-close{position:fixed;top:14px;right:14px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);border:none;cursor:pointer;color:#fff;font-size:20px;line-height:1;z-index:3001;display:flex;align-items:center;justify-content:center;transition:background .15s}
+#att-vw-close:hover{background:rgba(255,255,255,.35)}
+#att-vw-box{display:flex;flex-direction:column;align-items:center;max-width:min(92vw,960px);max-height:90vh}
+#att-vw-img{max-width:100%;max-height:82vh;border-radius:10px;display:block;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+#att-vw-video{max-width:min(90vw,800px);max-height:80vh;border-radius:10px}
+#att-vw-iframe{width:min(88vw,820px);height:80vh;border:none;border-radius:8px;background:#fff}
+#att-vw-file{background:rgba(255,255,255,.08);border-radius:14px;padding:36px 48px;text-align:center;color:#fff}
+#att-vw-name{color:rgba(255,255,255,.55);font-size:11px;margin-top:10px;max-width:min(90vw,800px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ETAPAS */
 .etapas-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--shadow);overflow:hidden}
@@ -607,6 +617,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
 </div>
 
 <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+<!-- VISUALIZADOR DE ANEXOS -->
+<div id="att-vw-overlay" onclick="if(event.target===this)closeAttViewer()">
+  <button id="att-vw-close" onclick="closeAttViewer()">✕</button>
+  <div id="att-vw-box">
+    <div id="att-vw-content"></div>
+    <div id="att-vw-name"></div>
+  </div>
+</div>
 <!-- MODAL REMOVER -->
 <div class="modal-overlay" id="rm-overlay" style="display:none" onclick="if(event.target===this)fecharModalRemover()">
   <div class="modal-box" style="width:min(360px,calc(100vw - 24px))">
@@ -3204,16 +3222,43 @@ function _carregarComentarios(){
     }).catch(()=>{});
 }
 
+function openAttViewer(url,type,name){
+  const ov=document.getElementById('att-vw-overlay');
+  const content=document.getElementById('att-vw-content');
+  const nameEl=document.getElementById('att-vw-name');
+  const isImg=type?.startsWith('image/');
+  const isVid=type?.startsWith('video/');
+  const isPdf=type==='application/pdf';
+  if(isImg)content.innerHTML=`<img id="att-vw-img" src="${url}" alt="">`;
+  else if(isVid)content.innerHTML=`<video id="att-vw-video" src="${url}" controls autoplay></video>`;
+  else if(isPdf)content.innerHTML=`<iframe id="att-vw-iframe" src="${url}"></iframe>`;
+  else content.innerHTML=`<div id="att-vw-file"><div style="font-size:52px">📎</div><div style="margin:14px 0 22px;font-size:14px;color:rgba(255,255,255,.8)">${name||'arquivo'}</div><a href="${url}" download style="display:inline-block;padding:10px 24px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">⬇ Baixar</a></div>`;
+  nameEl.textContent=name||'';
+  ov.classList.add('open');
+  document.addEventListener('keydown',_attVwEsc);
+}
+function closeAttViewer(){
+  const ov=document.getElementById('att-vw-overlay');
+  ov.classList.remove('open');
+  const c=document.getElementById('att-vw-content');
+  c.innerHTML='';
+  document.removeEventListener('keydown',_attVwEsc);
+}
+function _attVwEsc(e){if(e.key==='Escape')closeAttViewer();}
+
 function _attHtml(a){
   const url=PROD_API+'/api/attachments/'+(a.attId||a.id);
   const isImg=a.type?.startsWith('image/');
   const isVid=a.type?.startsWith('video/');
   const isPdf=a.type==='application/pdf';
   const sz=a.size>1048576?(a.size/1048576).toFixed(1)+'MB':(Math.round(a.size/1024)||1)+'KB';
-  if(isImg)return`<a href="${url}" target="_blank"><img class="comt-att-img" src="${url}" loading="lazy" alt="${esc(a.name)}"></a>`;
+  const t=(a.type||'').replace(/'/g,'');
+  const n=(a.name||'arquivo').replace(/'/g,'&#39;');
+  const call=`openAttViewer('${url}','${t}','${n}')`;
+  if(isImg)return`<a href="#" onclick="${call};return false"><img class="comt-att-img" src="${url}" loading="lazy" alt="${esc(a.name)}"></a>`;
   if(isVid)return`<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bd)"><video src="${url}" controls style="max-width:220px;max-height:130px;display:block"></video></div>`;
   const icon=isPdf?'📄':'📎';
-  return`<a href="${url}" target="_blank" class="comt-att-file"><span class="comt-att-icon">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)}</span><span style="color:var(--tx3);flex-shrink:0;margin-left:4px">${sz}</span></a>`;
+  return`<a href="#" onclick="${call};return false" class="comt-att-file"><span class="comt-att-icon">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)}</span><span style="color:var(--tx3);flex-shrink:0;margin-left:4px">${sz}</span></a>`;
 }
 
 function _renderComentarios(lista){
