@@ -3881,7 +3881,7 @@ function _getQuadroRows(){
             // hoje
             if(e.firstStartAt&&e.firstStartAt>=ts){
               const sec=e.baseElapsed||0;
-              todaySecs+=sec;
+              if(sec<86400)todaySecs+=sec; // ignora valores corrompidos (>24h)
               if(e.state==='active')todaySecs+=(Date.now()-e.startAt)/1000;
             }
             // tarefa atual
