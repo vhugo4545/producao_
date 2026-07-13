@@ -4135,33 +4135,16 @@ async function _carregarContextoOperador(userId){
 
 // Carrega TODOS os pedidos da API Kommo — só para o gestor
 async function _carregarPropostasTodas(){
-  // ── FASE 1: cache do servidor (instantâneo ~200ms) ──────────
-  let serverCache=null;
-  try{
-    const r=await fetch(PROD_API+'/api/proposals-cache');
-    if(r.ok){
-      serverCache=await r.json();
-      if(serverCache?.length>0){
-        allData=serverCache;
-        await loadProducaoStates();
-        _render();
-        console.log('[cache] servidor: '+serverCache.length+' propostas carregadas');
-      }
-    }
-  }catch(_){}
-
-  // Fallback: cache localStorage se servidor falhou
-  if(!serverCache?.length){
-    const lc=_loadCache();
-    if(lc){
-      allData=lc;
-      await loadProducaoStates();
-      _render();
-      console.log('[cache] local: '+lc.length+' propostas carregadas');
-    }
+  // Cache local para renderização rápida inicial
+  const lc=_loadCache();
+  if(lc){
+    allData=lc;
+    await loadProducaoStates();
+    _render();
+    console.log('[cache] local: '+lc.length+' propostas carregadas');
   }
 
-  // ── FASE 2: revalida da API Kommo em background ─────────────
+  // Revalida da API Kommo (sempre busca dados frescos)
   try{
     const j=await fetchPagina(1,100);
     _totalPropostas=j.total||0;
@@ -4171,12 +4154,8 @@ async function _carregarPropostasTodas(){
     (j.propostas||[]).forEach(p=>byId.set(p._id,p));
     allData=[...byId.values()];
 
-    if(!serverCache?.length){
-      await loadProducaoStates();
-      _render();
-    } else {
-      _deferRender();
-    }
+    await loadProducaoStates();
+    _render();
 
     // Demais páginas em background
     for(let p=2;p<=_totalPags;p++){
@@ -4190,21 +4169,10 @@ async function _carregarPropostasTodas(){
       }catch(_){break;}
     }
 
-    // ── FASE 3: salva no servidor E no localStorage ─────────
     _render();
     _saveCache();
-    const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
-    if(ativas.length>0){
-      for(let i=0;i<ativas.length;i+=50){
-        fetch(PROD_API+'/api/proposals-cache/sync',{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({proposals:ativas.slice(i,i+50)})
-        }).catch(()=>{});
-      }
-      console.log('[cache] servidor atualizado: '+ativas.length+' propostas');
-    }
   }catch(e){
-    if(!serverCache?.length&&!_loadCache())
+    if(!lc)
       $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
   }
 }
