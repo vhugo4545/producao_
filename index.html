@@ -4168,6 +4168,8 @@ async function _carregarPropostasTodas(){
         const byId2=new Map(allData.map(x=>[x._id,x]));
         (jj.propostas||[]).forEach(x=>byId2.set(x._id,x));
         allData=[...byId2.values()];
+        // Indexa numeração dos itens das novas propostas (necessário para itemLabel funcionar)
+        (jj.propostas||[]).forEach(x=>_indexarProds(x));
         _refreshStats();
         _deferRender();
       }catch(_){break;}
