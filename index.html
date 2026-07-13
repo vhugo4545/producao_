@@ -4171,6 +4171,16 @@ async function _carregarPropostasTodas(){
 
     _render();
     _saveCache();
+    // Atualiza ProposalCache no servidor para que operadores recebam dados frescos
+    const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
+    if(ativas.length>0){
+      for(let i=0;i<ativas.length;i+=50){
+        fetch(PROD_API+'/api/proposals-cache/sync',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({proposals:ativas.slice(i,i+50)})
+        }).catch(()=>{});
+      }
+    }
   }catch(e){
     if(!lc)
       $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
