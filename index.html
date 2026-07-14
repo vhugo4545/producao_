@@ -1337,26 +1337,16 @@ async function p5RegistrarEvento(){
   e.state='done';e.firstStartAt=now;e.endAt=now;e.baseElapsed=0;
   if(currentUser?.id)e.assignedTo=currentUser.id;
   renderP5State();renderP5Ctrl();
-  try{
-    await fetch(`${API_BASE}/api/producao/${encodeURIComponent(k)}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({etapaIdx:i,state:'done',baseElapsed:0,firstStartAt:now,endAt:now,assignedTo:currentUser?.id||null})
-    });
-    toast('Evento registrado');
-  }catch(err){toast('Erro ao salvar');}
+  saveProducaoState(k,0);
+  toast('Evento registrado');
 }
 async function p5DesfazerEvento(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
   if(e.state!=='done')return;
   e.state='pending';e.firstStartAt=null;e.endAt=null;e.baseElapsed=0;e.assignedTo=null;
   renderP5State();renderP5Ctrl();
-  try{
-    await fetch(`${API_BASE}/api/producao/${encodeURIComponent(k)}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({etapaIdx:i,state:'pending',baseElapsed:0,firstStartAt:null,endAt:null,assignedTo:null})
-    });
-    toast('Registro desfeito');
-  }catch(err){toast('Erro ao salvar');}
+  saveProducaoState(k,0);
+  toast('Registro desfeito');
 }
 function p5Pausar(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
@@ -2386,7 +2376,7 @@ function renderP1(){
                   opMap.get(uid).etapas.push(i+1);
                 });
               });
-              const opChips=opMap.size?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'
+              opChips=opMap.size?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'
                 +Array.from(opMap.values()).map(o=>'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px;background:var(--bg3);border:1px solid var(--bd);color:var(--tx2)">'+esc(o.nome)+'</span>').join('')
                 +'</div>':'';
               info=nextOp?(nextNome+' → '+nextOp.nome.split(' ')[0]):(ETAPAS[0].nome+' → '+(USUARIOS.find(u=>u.id===e0.assignedTo)?.nome.split(' ')[0]||e0.assignedTo));
@@ -2665,7 +2655,7 @@ function abrirOA(id){
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
   _curOA=oa;
   const nomeCurto=USUARIOS.find(u=>u.id===oa.assignedTo)?.nome.split(' ')[0]||oa.assignedTo;
-  setBread([{label:'Op. Avulsas',onclick:()=>renderP1()},{label:oa.titulo,active:true}]);
+  setBread([{label:'Op. Avulsas',pg:'p1'},{label:oa.titulo,active:true}]);
   setTitle('Operação Avulsa');
   renderP5OA();
   showPage('p5');
@@ -4115,7 +4105,7 @@ function _refreshProposalCache(proj){
 async function _carregarContextoOperador(userId){
   try{
     const r=await fetch(PROD_API+'/api/operator-context/'+userId,{signal:AbortSignal.timeout(6000)});
-    if(!r.ok)return;
+    if(!r.ok){_operadorPronto=true;renderMinhasTarefas();return;}
     const {producao,proposals}=await r.json();
     // Adiciona ao allData apenas propostas que ainda não existem — não sobrescreve dados
     // frescos da API Kommo com versões do cache MongoDB (possivelmente mais antigas)
