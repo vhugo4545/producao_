@@ -3762,6 +3762,7 @@ function saveProducaoState(key, delay=400){
       if(r.ok){_lastSyncTs=Date.now();}
       else console.warn('[producao] erro HTTP ao salvar ('+r.status+') — estado salvo só no localStorage:', key);
     }catch(e){console.warn('[producao] backend offline — estado salvo só no localStorage:', key);}
+    _saveTimer[key]=null;
   }, delay);
 }
 
