@@ -1483,13 +1483,14 @@ function updateProgresso(){
 // Se não houver, agrupa os insumos pelo tipo e usa o nome do grupo como produto único
 function _isInstalacao(nome){return /instala[çc][aã][oõ]/i.test(nome||'')||/instala/i.test(nome||'');}
 function _isFaturamentoDireto(nome){return /faturamento direto/i.test(nome||'');}
+function _isVidro(nome){return /vidro/i.test(nome||'');}
 function getProdutosDoGrupo(grupo,propId){
   const itens=grupo.itens||[];
   // Tenta achar o item "Produto Acabado" de cada sub-produto
   const acabados=itens.filter(i=>i.descricao_utilizacao==='Produto Acabado'&&i.nome_produto);
   if(acabados.length>0){
     return acabados
-      .filter(i=>!_isInstalacao(i.nome_produto)&&!_isFaturamentoDireto(i.nome_produto))
+      .filter(i=>!_isInstalacao(i.nome_produto)&&!_isFaturamentoDireto(i.nome_produto)&&!_isVidro(i.nome_produto))
       .map((i,idx)=>({
         nome:i.nome_produto,
         itemNum:idx+1,
@@ -1499,7 +1500,7 @@ function getProdutosDoGrupo(grupo,propId){
       }));
   }
   // Fallback: o grupo inteiro é um produto — oculta se for instalação ou faturamento direto
-  if(_isInstalacao(grupo.nome)||_isFaturamentoDireto(grupo.nome))return[];
+  if(_isInstalacao(grupo.nome)||_isFaturamentoDireto(grupo.nome)||_isVidro(grupo.nome))return[];
   return [{
     nome:grupo.nome,
     itemNum:1,
