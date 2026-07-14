@@ -2307,6 +2307,7 @@ function renderP1(){
 
       let ri=0;
       areaMap.forEach((items,areaLabel)=>{
+        if(!items.length)return;
         const areaKey=p.proj._id+'||'+areaLabel;
         const isAreaOpen=_expandedAreas.has(areaKey);
         const areaTotal=items.length;
