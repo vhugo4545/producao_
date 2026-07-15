@@ -1119,7 +1119,11 @@ function esc(s){if(s===null||s===undefined)return'';return String(s).replace(/&/
 function fmtPedNum(num){
   const m=String(num).match(/^(\d+)(\/\d+)?(.*)$/);
   if(!m)return`<span style="font-size:22px;font-weight:900;font-family:'Inconsolata',monospace;letter-spacing:-.5px;color:var(--tx)">${esc(num)}</span>`;
-  return`<span style="font-size:22px;font-weight:900;font-family:'Inconsolata',monospace;letter-spacing:-.5px;color:var(--tx)">${esc(m[1])}</span>`
+  const digits=m[1];
+  const prefix=digits.length>2?digits.slice(0,digits.length-3):'';
+  const main=digits.length>2?digits.slice(-3):digits;
+  return(prefix?`<span style="font-size:13px;font-weight:500;font-family:'Inconsolata',monospace;color:var(--tx3);letter-spacing:0;vertical-align:middle">${esc(prefix)}</span>`:'')
+    +`<span style="font-size:22px;font-weight:900;font-family:'Inconsolata',monospace;letter-spacing:-.5px;color:var(--tx)">${esc(main)}</span>`
     +(m[2]?`<span style="font-size:13px;font-weight:500;font-family:'Inconsolata',monospace;color:var(--tx3)">${esc(m[2])}</span>`:'')
     +(m[3]?`<span style="font-size:13px;color:var(--tx3)">${esc(m[3])}</span>`:'');
 }
