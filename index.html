@@ -1409,8 +1409,6 @@ function p5Encerrar(){
     updateDot(lk);saveProducaoState(lk,0);
   });
   updateProgresso();
-  const maisItens=_getLinkaveisAplicar();
-  if(maisItens.length>0){_miAbrir('aplicar',maisItens);return;}
   _miNavAposEncerrar(i);
 }
 function p5AjustarTempo(){
