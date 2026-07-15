@@ -4309,7 +4309,14 @@ let _miFirstStartAt=0;
 function _getLinkaveisIniciar(){
   if(!curProj||curEtapaIdx==null||!currentUser)return[];
   if(ETAPAS[curEtapaIdx]?.evento)return[];
-  // Todos os produtos do pedido com essa etapa pendente (não só os atribuídos ao operador)
+  if(currentUser.role==='operador'){
+    return getMinhasTarefas().filter(t=>
+      t.proj._id===curProj._id&&
+      t.etapaIdx===curEtapaIdx&&
+      t.prod.key!==curKey&&
+      t.etapaState.state==='pending'
+    );
+  }
   const result=[];
   (curProj.grupos||[]).forEach(grupo=>{
     getProdutosDoGrupo(grupo,curProj._id).forEach(prod=>{
