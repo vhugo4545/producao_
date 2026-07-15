@@ -1107,6 +1107,10 @@ function pad(n){return String(n).padStart(2,'0')}
 function fmtTs(ms){if(!ms)return'—';return new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 function fmtDate(ms){if(!ms)return'';return new Date(ms).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})}
 function addDiasUteis(dateStr,dias){if(!dateStr||!dias)return'';const d=new Date(dateStr+'T12:00:00');let c=parseInt(dias,10);if(isNaN(c)||c<=0)return'';while(c>0){d.setDate(d.getDate()+1);const dw=d.getDay();if(dw!==0&&dw!==6)c--;}return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function addDiasUteisDate(dateStr,dias){if(!dateStr||!dias)return null;const d=new Date(dateStr+'T12:00:00');let c=parseInt(dias,10);if(isNaN(c)||c<=0)return null;while(c>0){d.setDate(d.getDate()+1);const dw=d.getDay();if(dw!==0&&dw!==6)c--;}return d;}
+function maxPrevisaoProj(proj){const base=proj.camposFormulario?.dataProjetoAssinado;let max=null;(proj.grupos||[]).forEach(g=>{const d=addDiasUteisDate(base,g.parametros?.previsaoEntrega);if(d&&(!max||d>max))max=d;});return max?max.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';}
+function _chipPrevisao(dateStr){return dateStr?'<span style="font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:5px;padding:1px 6px;white-space:nowrap;flex-shrink:0">📅 '+dateStr+'</span>':'';}
+
 /* ── Helpers de segurança ── */
 function esc(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 // Destaca os dígitos principais do número do pedido, atenua o sufixo /AA
@@ -2084,6 +2088,7 @@ function renderMinhasTarefas(){
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="font-family:'Inconsolata',monospace;font-size:14px;font-weight:700;color:var(--accent)">${esc(pedNum)}</span>
+            ${_chipPrevisao(maxPrevisaoProj(proj))}
             ${statusResume}
           </div>
           <div style="font-size:11px;color:var(--tx3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cliente)}${cidade?' · '+esc(cidade):''}</div>
@@ -2119,7 +2124,10 @@ function renderMinhasTarefas(){
           prodMap.forEach(({prod,grupo,etapas:pEtapasTasks})=>{
             // ── Linha de produto ──
             html+=`<div style="border-top:1px solid var(--bd);background:var(--bg);padding:10px 16px 6px 32px">
-              <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">${esc(itemLabel(prod))}</div>`;
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+                <span style="font-size:12px;font-weight:700;color:var(--tx)">${esc(itemLabel(prod))}</span>
+                ${_chipPrevisao(addDiasUteis(proj.camposFormulario?.dataProjetoAssinado,grupo.parametros?.previsaoEntrega))}
+              </div>`;
 
             pEtapasTasks.forEach(t=>{
               const cfg=ETAPAS[t.etapaIdx];
@@ -2450,11 +2458,11 @@ function renderP1(){
               +'<div style="flex:1;min-width:0">'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
                   +'<span style="font-size:13px;font-weight:700;color:var(--tx);letter-spacing:-.01em">'+esc(itemLabel(prod))+'</span>'
+                  +_chipPrevisao(addDiasUteis(p.proj.camposFormulario?.dataProjetoAssinado,grupo.parametros?.previsaoEntrega))
                   +badge
                 +'</div>'
                 +(info?'<div style="font-size:11px;color:var(--tx3);line-height:1.4">'+esc(info)+'</div>':'')
-                +opChips
-                +(()=>{const _du=addDiasUteis(p.proj.camposFormulario?.dataProjetoAssinado,grupo.parametros?.previsaoEntrega);return _du?'<div style="font-size:10px;color:var(--tx3);margin-top:4px">📅 Entrega: <b>'+_du+'</b></div>':'';})())
+                +opChips)
               +'</div>'
               +'<div style="flex-shrink:0;text-align:right">'
                 +'<div style="font-size:11px;font-family:\'Inconsolata\',monospace;font-weight:600;color:var(--tx2);margin-bottom:4px">'+psd+' / '+prodStagesTotal+'</div>'
@@ -2506,9 +2514,11 @@ function renderP1(){
         +'</div>'
         +'<div class="proj-divider" style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
         +'<div style="flex:1;min-width:0">'
-          +'<div style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.cliente)+'</div>'
+          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+            +'<span style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.cliente)+'</span>'
+            +_chipPrevisao(maxPrevisaoProj(p.proj))
+          +'</div>'
           +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cidade)+'</div>':'')
-          +(function(){var d=p.prazoPrevisto;return '<div style="font-size:10px;color:var(--tx3);margin-top:2px;white-space:nowrap">Prazo: '+esc(d?d.split('-').reverse().join('/'):'—')+'</div>';}())
         +'</div>'
         +'<div class="proj-right-block" style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
           +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
