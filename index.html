@@ -2231,11 +2231,10 @@ function renderP1(){
   const _sortBtnStyle=(v)=>`cursor:pointer;border:1px solid ${_sortP1===v?'var(--accent)':'var(--bd)'};background:${_sortP1===v?'var(--accent)':'var(--bg2)'};color:${_sortP1===v?'#fff':'var(--tx3)'};border-radius:7px;padding:5px 10px;font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;white-space:nowrap;transition:all .15s`;
   const searchBar=`<div style="position:sticky;top:0;z-index:50;background:var(--bg);padding-bottom:12px;margin-bottom:2px">
   <div style="position:relative">
-    <div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:15px;pointer-events:none">🔍</div>
     <input id="p1-search" type="text" value="${q.replace(/"/g,'&quot;')}"
       placeholder="Buscar por pedido, cliente ou cidade…"
       oninput="searchP1(this.value)"
-      style="width:100%;box-sizing:border-box;padding:11px 14px 11px 38px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);color:var(--tx);outline:none;transition:border-color .15s;box-shadow:var(--shadow)"
+      style="width:100%;box-sizing:border-box;padding:11px 14px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;border:1px solid var(--bd);border-radius:10px;background:var(--bg2);color:var(--tx);outline:none;transition:border-color .15s;box-shadow:var(--shadow)"
       onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'">
     ${q?`<button onclick="searchP1('')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:4px">✕</button>`:''}
   </div>
