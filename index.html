@@ -1109,8 +1109,9 @@ function fmtDate(ms){if(!ms)return'';return new Date(ms).toLocaleDateString('pt-
 function addDiasUteis(dateStr,dias){if(!dateStr||!dias)return'';const d=new Date(dateStr+'T12:00:00');let c=parseInt(dias,10);if(isNaN(c)||c<=0)return'';while(c>0){d.setDate(d.getDate()+1);const dw=d.getDay();if(dw!==0&&dw!==6)c--;}return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function addDiasUteisDate(dateStr,dias){if(!dateStr||!dias)return null;const d=new Date(dateStr+'T12:00:00');let c=parseInt(dias,10);if(isNaN(c)||c<=0)return null;while(c>0){d.setDate(d.getDate()+1);const dw=d.getDay();if(dw!==0&&dw!==6)c--;}return d;}
 function fmtPrevisao(dateStr){if(!dateStr)return'';const d=new Date(dateStr+'T12:00:00');if(isNaN(d))return'';return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
-function _gPrz(g){return g.previsaoEntrega||g.parametros?.previsaoEntrega||'';}
-function maxPrevisaoProj(proj){const dates=(proj.grupos||[]).map(g=>_gPrz(g)).filter(Boolean).sort();return dates.length?fmtPrevisao(dates[dates.length-1]):'';}
+function _gPrz(g,base){return addDiasUteis(base,g.parametros?.previsaoEntrega);}
+function maxPrevisaoProj(proj){const base=proj.camposFormulario?.dataProjetoAssinado;const dates=(proj.grupos||[]).map(g=>addDiasUteisDate(base,g.parametros?.previsaoEntrega)).filter(Boolean).sort((a,b)=>a-b);return dates.length?dates[dates.length-1].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';}
+
 function _chipPrevisao(dateStr){return '<span style="font-size:10px;font-weight:600;color:'+(dateStr?'var(--accent)':'var(--tx3)')+';background:'+(dateStr?'var(--accent-light)':'var(--bg3)')+';border:1px solid '+(dateStr?'var(--accent)':'var(--bd)')+';border-radius:5px;padding:1px 6px;white-space:nowrap;flex-shrink:0">📅 '+(dateStr||'—')+'</span>';}
 function _infoTag(label,value){const ok=!!value;const c=ok?'var(--accent)':'#dc2626';const bg=ok?'var(--accent-light)':'#fef2f2';const bd=ok?'var(--accent)':'#fca5a5';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+bg+';border:1px solid '+bd+';border-radius:4px;padding:1px 6px;white-space:nowrap">'+label+(value?' '+value:'')+'</span>';}
 
@@ -1670,7 +1671,7 @@ function openGrupo(grupoId){
       <div class="grupo-info">
         <div class="grupo-nome">${esc(itemLabel(prod))}</div>
         <div class="grupo-amb">${insCnt} insumo${insCnt!==1?'s':''}</div>
-        ${(()=>{const _du=fmtPrevisao(_gPrz(grupo));return _du?`<div class="grupo-amb" style="margin-top:2px">📅 ${_du}</div>`:'';})()}
+        ${(()=>{const _du=_gPrz(grupo,curProj.camposFormulario?.dataProjetoAssinado);return _du?`<div class="grupo-amb" style="margin-top:2px">📅 ${_du}</div>`:'';})()}
       </div>
       <div class="dot ${state}" id="dot-${esc(k)}"></div>
       <div class="sm-timer ${state==='idle'?'':state}" id="sm-${esc(k)}">${state==='idle'?'':doneCount+'/'+ETAPAS.length}</div>
@@ -2133,7 +2134,7 @@ function renderMinhasTarefas(){
             html+=`<div style="border-top:1px solid var(--bd);background:var(--bg);padding:10px 16px 6px 32px">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
                 <span style="font-size:12px;font-weight:700;color:var(--tx)">${esc(itemLabel(prod))}</span>
-                ${_chipPrevisao(fmtPrevisao(_gPrz(grupo)))}
+                ${_chipPrevisao(_gPrz(grupo,proj.camposFormulario?.dataProjetoAssinado))}
               </div>`;
 
             pEtapasTasks.forEach(t=>{
@@ -2379,7 +2380,7 @@ function renderP1(){
             +'<span style="font-size:12px;color:var(--tx3)">'+(isAreaOpen?'▼':'▶')+'</span>'
             +'<span style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;letter-spacing:.1em">'+esc(areaLabel)+'</span>'
             +'<span style="font-size:10px;color:var(--tx3)">'+areaTotal+' produto'+(areaTotal!==1?'s':'')+'</span>'
-            +_chipPrevisao(fmtPrevisao(_gPrz(items[0]?.grupo||{})))
+            +_chipPrevisao(_gPrz(items[0]?.grupo||{},p.proj.camposFormulario?.dataProjetoAssinado))
           +'</div>'
           +'<div style="display:flex;align-items:center;gap:10px">'
             +'<div id="'+_areaIndId(areaKey)+'" style="display:'+(+_selN>0?'':'none')+'">'+_indHtml+'</div>'
@@ -2466,7 +2467,7 @@ function renderP1(){
               +'<div style="flex:1;min-width:0">'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
                   +'<span style="font-size:13px;font-weight:700;color:var(--tx);letter-spacing:-.01em">'+esc(itemLabel(prod))+'</span>'
-                  +(_gPrz(grupo)?_chipPrevisao(fmtPrevisao(_gPrz(grupo))):'<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;white-space:nowrap">PRZ</span>')
+                  +(()=>{const _prz=_gPrz(grupo,p.proj.camposFormulario?.dataProjetoAssinado);return _prz?_chipPrevisao(_prz):'<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;white-space:nowrap">PRZ</span>';})()
                   +badge
                 +'</div>'
                 +(info?'<div style="font-size:11px;color:var(--tx3);line-height:1.4">'+esc(info)+'</div>':'')
@@ -3212,7 +3213,7 @@ function renderP4Right(panelId){
     ...(curProd.obs?[{label:'Descrição',val:esc(curProd.obs),size:12,style:'line-height:1.6;white-space:pre-line;color:var(--tx2)'}]:[]),
     {label:'Grupo',val:esc(curGrupo.nome),size:13},
     {label:'Ambiente',val:esc(curGrupo.ambiente||'—'),size:13},
-    {label:'Previsão de Entrega',val:esc(fmtPrevisao(_gPrz(curGrupo))||'—'),size:13},
+    {label:'Previsão de Entrega',val:esc(_gPrz(curGrupo,curProj.camposFormulario?.dataProjetoAssinado)||'—'),size:13},
     {label:'Pedido',val:esc(pedNum)+' — '+esc(cliente),size:13},
     ...obraFields.map(f=>({label:f.label,val:esc(f.val),size:13})),
     {label:'Prazo Previsto',val:esc(cf.prazoPrevisto?cf.prazoPrevisto.split('-').reverse().join('/'):'—'),size:13},
