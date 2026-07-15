@@ -2254,7 +2254,7 @@ function renderP1(){
         ?'<div style="display:flex;flex-direction:column;gap:0">'+Array(6).fill(_skeletonCard()).join('')+'</div>'
         :`<div class="empty-state">Nenhum pedido em produção</div>`
     );
-    if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+    {const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
     return;
   }
 
@@ -2507,7 +2507,7 @@ function renderP1(){
   }
   $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>'+oaHtml;
   // Mantém foco e cursor no campo de busca após re-render
-  if(q){const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+  {const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
   // Inicializa estado indeterminate dos checkboxes de área (não pode ser feito via atributo HTML)
   Object.keys(_areaProdKeys).forEach(areaKey=>{
     const chk=document.getElementById(_areaChkId(areaKey));
