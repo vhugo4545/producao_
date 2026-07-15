@@ -2100,6 +2100,7 @@ function renderMinhasTarefas(){
             ${statusResume}
           </div>
           <div style="font-size:11px;color:var(--tx3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cliente)}${cidade?' · '+esc(cidade):''}</div>
+          ${(()=>{const _d=fmtPrevisao(proj.camposFormulario?.dataProjetoAssinado),_p=maxPrevisaoProj(proj),_t=(_d?'':' <span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;white-space:nowrap">D/ASS</span>')+(_p?'':' <span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;white-space:nowrap">PRZ</span>');return _t.trim()?`<div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap">${_t}</div>`:''})()}
         </div>
         <div style="font-size:11px;color:var(--tx3);flex-shrink:0">${totalTarefas} tarefa${totalTarefas!==1?'s':''}</div>
         <div style="font-size:16px;color:var(--tx3);flex-shrink:0;transition:transform .2s;${isOpen?'transform:rotate(90deg)':''}">›</div>
