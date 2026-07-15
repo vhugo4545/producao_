@@ -2582,19 +2582,16 @@ function renderP1(){
   $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>'+oaHtml;
   // Mantém foco e cursor no campo de busca após re-render
   {const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
-  // Inicializa estado indeterminate dos checkboxes de área (não pode ser feito via atributo HTML)
-  Object.keys(_areaProdKeys).forEach(areaKey=>{
-    const chk=document.getElementById(_areaChkId(areaKey));
-    if(!chk)return;
-    const keys=_areaProdKeys[areaKey]||[];
-    const n=keys.filter(k=>_selectedKeys.has(k)).length;
-    chk.checked=n===keys.length&&keys.length>0;
-    chk.indeterminate=n>0&&n<keys.length;
+  // Restaura estado dos checkboxes de produto visíveis no DOM
+  document.querySelectorAll('.bulk-chk').forEach(c=>{
+    if(_selectedKeys.has(c.dataset.key))c.checked=true;
   });
-  // Restaura barras de seleção para pedidos com keys selecionadas
+  // Restaura indicadores e checkboxes de área
+  Object.keys(_areaProdKeys).forEach(areaKey=>_updateAreaSelInd(areaKey));
+  // Restaura bulk bars e area bars para todos os pedidos com seleção
   if(_selectedKeys.size>0){
-    const pids=new Set([...document.querySelectorAll('.bulk-chk:checked')].map(c=>c.dataset.pid));
-    pids.forEach(pid=>_updateBulkBar(pid));
+    const projIds=new Set([..._selectedKeys].map(k=>k.split('__')[0]));
+    projIds.forEach(pid=>_updateBulkBar(pid));
   }
 }
 function gestorRedemandarInline(key,etapaIdx,selId){
