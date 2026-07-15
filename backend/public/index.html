@@ -1111,6 +1111,7 @@ function addDiasUteisDate(dateStr,dias){if(!dateStr||!dias)return null;const d=n
 function fmtPrevisao(dateStr){if(!dateStr)return'';const d=new Date(dateStr+'T12:00:00');if(isNaN(d))return'';return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function maxPrevisaoProj(proj){const dates=(proj.grupos||[]).map(g=>g.previsaoEntrega).filter(Boolean).sort();return dates.length?fmtPrevisao(dates[dates.length-1]):'';}
 function _chipPrevisao(dateStr){return '<span style="font-size:10px;font-weight:600;color:'+(dateStr?'var(--accent)':'var(--tx3)')+';background:'+(dateStr?'var(--accent-light)':'var(--bg3)')+';border:1px solid '+(dateStr?'var(--accent)':'var(--bd)')+';border-radius:5px;padding:1px 6px;white-space:nowrap;flex-shrink:0">📅 '+(dateStr||'—')+'</span>';}
+function _infoTag(label,value){const ok=!!value;const c=ok?'var(--accent)':'#dc2626';const bg=ok?'var(--accent-light)':'#fef2f2';const bd=ok?'var(--accent)':'#fca5a5';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+bg+';border:1px solid '+bd+';border-radius:4px;padding:1px 6px;white-space:nowrap">'+label+(value?' '+value:'')+'</span>';}
 
 /* ── Helpers de segurança ── */
 function esc(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -2516,11 +2517,12 @@ function renderP1(){
         +'</div>'
         +'<div class="proj-divider" style="width:1px;height:36px;background:var(--bd);flex-shrink:0"></div>'
         +'<div style="flex:1;min-width:0">'
-          +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-            +'<span style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.cliente)+'</span>'
-            +_chipPrevisao(maxPrevisaoProj(p.proj))
+          +'<span style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">'+esc(p.cliente)+'</span>'
+          +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cidade)+'</div>':'')
+          +'<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'
+            +_infoTag('D/ASS',fmtPrevisao(p.proj.camposFormulario?.dataPedidoAssinado))
+            +_infoTag('PRZ',maxPrevisaoProj(p.proj))
           +'</div>'
-          +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cidade)+'</div>':'')
         +'</div>'
         +'<div class="proj-right-block" style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
           +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
