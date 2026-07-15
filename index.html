@@ -1101,7 +1101,7 @@ const pState={};
 const pEtapas={}; // key->[{state,baseElapsed,startAt,firstStartAt,endAt,assignedTo}]
 
 const $=id=>document.getElementById(id);
-function toast(m){const e=$('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2400)}
+function toast(m,dur=2400){const e=$('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),dur)}
 function fmtTime(s){s=Math.max(0,Math.round(s||0));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return h>0?`${h}:${pad(m)}:${pad(sec)}`:`${pad(m)}:${pad(sec)}`}
 function pad(n){return String(n).padStart(2,'0')}
 function fmtTs(ms){if(!ms)return'—';return new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
@@ -3337,8 +3337,10 @@ async function _onAnexarArquivos(input,panel){
             body:JSON.stringify({name:file.name,type:file.type,size:file.size,data}),
           });
           if(r.ok){const {id}=await r.json();const a=_pendingAtts[panel]?.find(x=>x.localId===localId);if(a){a.id=id;a.uploading=false;}}
-          else{_pendingAtts[panel]=(_pendingAtts[panel]||[]).filter(x=>x.localId!==localId);toast('Erro ao enviar '+file.name);}
-        }catch(e){_pendingAtts[panel]=(_pendingAtts[panel]||[]).filter(x=>x.localId!==localId);toast('Erro: '+file.name);}
+          else{let msg='HTTP '+r.status;try{const j=await r.json();msg=j.error||j.message||msg;}catch(_){}
+            _pendingAtts[panel]=(_pendingAtts[panel]||[]).filter(x=>x.localId!==localId);
+            toast('❌ Erro ao enviar "'+file.name+'": '+msg,5000);}
+        }catch(err){_pendingAtts[panel]=(_pendingAtts[panel]||[]).filter(x=>x.localId!==localId);toast('❌ Falha de rede ao enviar "'+file.name+'": '+(err.message||'erro desconhecido'),5000);}
         _renderPendingAtts(panel);
         resolve();
       };
