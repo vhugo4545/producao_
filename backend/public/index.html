@@ -2506,6 +2506,7 @@ function renderP1(){
       ?'<div id="bulk-bar-'+p.proj._id+'" onclick="event.stopPropagation()" style="display:none;border-top:2px solid var(--accent);background:var(--accent-light);padding:10px 16px;align-items:center;gap:10px;flex-wrap:wrap">'
         +'<span id="bulk-count-'+p.proj._id+'" style="font-size:12px;font-weight:700;color:var(--accent)">0 selecionados</span>'
         +'<button onclick="_selecionarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer">Selecionar todos</button>'
+        +'<button onclick="_selecionarTodasAreas(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer">Sel. todas as áreas</button>'
         +'<button onclick="_desmarcarTodos(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer">Desmarcar</button>'
         +'<div style="margin-left:auto">'
           +'<button onclick="_demandarSelecionados(\''+escJs(p.proj._id)+'\')" style="font-size:12px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:700;padding:7px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap">Distribuir etapas →</button>'
@@ -3072,6 +3073,14 @@ async function _saveBatch(keys){
 function _selecionarTodos(projId){
   document.querySelectorAll(`.bulk-chk[data-pid="${projId}"]`).forEach(c=>{
     _selectedKeys.add(c.dataset.key);c.checked=true;
+  });
+  _updateBulkBar(projId);
+}
+function _selecionarTodasAreas(projId){
+  Object.keys(_areaProdKeys).filter(k=>k.startsWith(projId+'||')).forEach(areaKey=>{
+    (_areaProdKeys[areaKey]||[]).forEach(k=>_selectedKeys.add(k));
+    document.querySelectorAll(`.bulk-chk[data-area="${CSS.escape(areaKey)}"]`).forEach(c=>c.checked=true);
+    _updateAreaSelInd(areaKey);
   });
   _updateBulkBar(projId);
 }
