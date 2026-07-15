@@ -2501,9 +2501,9 @@ function renderP1(){
         });
       });
     }
-    // faixa fixa de ação por área (sempre visível quando pedido aberto)
+    // faixa fixa de ação por área (some quando bulk bar aparece)
     const areaBar=isOpen
-      ?'<div onclick="event.stopPropagation()" style="border-top:1px solid var(--bd);background:var(--bg3);padding:6px 16px;display:flex;align-items:center;gap:8px">'
+      ?'<div id="area-bar-'+p.proj._id+'" onclick="event.stopPropagation()" style="border-top:1px solid var(--bd);background:var(--bg3);padding:6px 16px;display:flex;align-items:center;gap:8px">'
         +'<button onclick="_selecionarTodasAreas(\''+escJs(p.proj._id)+'\')" style="font-size:11px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;padding:4px 12px;border-radius:7px;border:1px solid var(--bd2);background:var(--bg2);color:var(--tx2);cursor:pointer">☑ Selecionar todas as áreas</button>'
       +'</div>'
       :'';
@@ -3047,6 +3047,9 @@ function _updateBulkBar(projId){
   const selCount=[..._selectedKeys].filter(k=>k.startsWith(projId+'__')).length;
   bar.style.display=selCount>0?'flex':'none';
   if(cnt)cnt.textContent=selCount+' selecionado'+(selCount!==1?'s':'');
+  // alterna faixa de ação de áreas: some quando bulk bar está visível
+  const areaBar=document.getElementById('area-bar-'+projId);
+  if(areaBar)areaBar.style.display=selCount>0?'none':'flex';
 }
 
 // Salva múltiplos estados no MongoDB em uma única requisição (evita falhas por requests simultâneos)
