@@ -2643,8 +2643,9 @@ function gestorLiberarEtapa(key,etapaIdx,liberar){
 // ── MODAL DEMANDAR ──────────────────────────────────────────────
 let _dmKey=null, _dmMode=0, _dmKeys=[], _dmStep=0, _dmStepData={};
 
-function abrirModalDemandar(key){
+async function abrirModalDemandar(key){
   _dmKey=key; _dmKeys=[key]; _dmMode=0; _dmStep=0; _dmStepData={};
+  await _fetchUsuarios();
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
 }
@@ -3228,10 +3229,11 @@ function _toggleAreaChk(areaKey,projId){
   _updateAreaSelInd(areaKey);
   _updateBulkBar(projId);
 }
-function _demandarSelecionados(projId){
+async function _demandarSelecionados(projId){
   const keys=[..._selectedKeys].filter(k=>k.startsWith(projId+'__'));
   if(!keys.length){toast('Nenhum produto selecionado');return;}
   _dmKey=null; _dmKeys=keys; _dmMode=0; _dmStep=0; _dmStepData={};
+  await _fetchUsuarios();
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
 }
