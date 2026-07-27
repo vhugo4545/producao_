@@ -923,7 +923,7 @@ let _pollInterval=null;
 let _operadorPronto=false; // true após _carregarContextoOperador terminar (com ou sem tarefas)
 const _POLL_MS=5000;
 
-const USUARIOS=[
+let USUARIOS=[
   {id:'luizao',nome:'Luiz Fernando Lima',apelido:'Luizão',cargo:'Coordenador de Produção',setor:'Coordenação',role:'gestor'},
   {id:'davidson',nome:'Davidson Junio Pereira Maciel',cargo:'Serralheiro Montador',setor:'Serralheria',role:'operador'},
   {id:'dionata',nome:'Dionata Alan Silva Costa',cargo:'Serralheiro Montador I',setor:'Serralheria',role:'operador'},
@@ -1779,7 +1779,19 @@ async function doPrimeiroAcesso(){
   }
 }
 
+async function _fetchUsuarios(){
+  try{
+    const r=await fetch(PROD_API+'/api/users',{headers:{'Authorization':'Bearer '+_authToken}});
+    if(!r.ok)return;
+    const users=await r.json();
+    if(Array.isArray(users)&&users.length>0){
+      USUARIOS.length=0;
+      users.forEach(u=>USUARIOS.push({id:u.id,nome:u.nome,apelido:u.apelido||'',cargo:u.cargo||'',setor:u.setor||'',role:u.role}));
+    }
+  }catch(e){console.warn('[usuarios] falha ao carregar lista do servidor',e.message);}
+}
 function _entrarComoUsuario(user){
+  _fetchUsuarios(); // atualiza USUARIOS do MongoDB (async, não bloqueia login)
   currentUser=USUARIOS.find(u=>u.id===user.id)||user;
   _startPolling();
   if(currentUser.role==='operador'){
