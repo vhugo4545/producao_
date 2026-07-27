@@ -1786,7 +1786,7 @@ async function _fetchUsuarios(){
     const users=await r.json();
     if(Array.isArray(users)&&users.length>0){
       USUARIOS.length=0;
-      users.forEach(u=>USUARIOS.push({id:u.id,nome:u.nome,apelido:u.apelido||'',cargo:u.cargo||'',setor:u.setor||'',role:u.role}));
+      users.filter(u=>u.ativo).forEach(u=>USUARIOS.push({id:u.id,nome:u.nome,apelido:u.apelido||'',cargo:u.cargo||'',setor:u.setor||'',role:u.role}));
     }
   }catch(e){console.warn('[usuarios] falha ao carregar lista do servidor',e.message);}
 }
