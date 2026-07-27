@@ -2645,9 +2645,10 @@ let _dmKey=null, _dmMode=0, _dmKeys=[], _dmStep=0, _dmStepData={};
 
 async function abrirModalDemandar(key){
   _dmKey=key; _dmKeys=[key]; _dmMode=0; _dmStep=0; _dmStepData={};
-  await _fetchUsuarios();
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
+  await _fetchUsuarios();
+  if(document.getElementById('dm-overlay').style.display!=='none') _renderModalDemandar();
 }
 function fecharModalDemandar(){
   document.getElementById('dm-overlay').style.display='none';
@@ -3233,9 +3234,10 @@ async function _demandarSelecionados(projId){
   const keys=[..._selectedKeys].filter(k=>k.startsWith(projId+'__'));
   if(!keys.length){toast('Nenhum produto selecionado');return;}
   _dmKey=null; _dmKeys=keys; _dmMode=0; _dmStep=0; _dmStepData={};
-  await _fetchUsuarios();
   _renderModalDemandar();
   document.getElementById('dm-overlay').style.display='flex';
+  await _fetchUsuarios();
+  if(document.getElementById('dm-overlay').style.display!=='none') _renderModalDemandar();
 }
 
 async function gestorDemandarInline(key,selId,etSelId){
