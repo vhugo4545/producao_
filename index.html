@@ -1705,7 +1705,7 @@ function _populateLoginSelect(){
   const ORDEM_PREF=['Coordenação','Serralheria','Polimento','Instalação','Torneiro'];
   const bySetor={};
   USUARIOS.forEach(u=>{const s=u.setor||'Outros';if(!bySetor[s])bySetor[s]=[];bySetor[s].push(u)});
-  const setores=[...ORDEM_PREF.filter(s=>bySetor[s]),...Object.keys(bySetor).filter(s=>!ORDEM_PREF.includes(s)).sort()];
+  const setores=[...ORDEM_PREF.filter(s=>bySetor[s]),...Object.keys(bySetor).filter(s=>!ORDEM_PREF.includes(s)&&s!=='Outros').sort()];
   sel.innerHTML='<option value="">Selecione...</option>'
     +setores.map(s=>
       `<optgroup label="${s}">`
