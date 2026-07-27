@@ -267,6 +267,16 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/users/public — lista usuários ativos para tela de login (sem auth) ──
+app.get('/api/users/public', async (_req, res) => {
+  try {
+    const users = await Usuario.find({}, 'id nome apelido cargo setor role -_id').sort({ nome: 1 }).lean();
+    res.json(users);
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // ── GET /api/users — lista usuários (gestor) ──────────────────
 app.get('/api/users', requireAuth, async (_req, res) => {
   try {

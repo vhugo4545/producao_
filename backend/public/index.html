@@ -1702,11 +1702,12 @@ let _authToken=null;
 function _populateLoginSelect(){
   const sel=$('login-user');
   if(!sel)return;
-  const ORDEM=['Coordenação','Serralheria','Polimento','Instalação','Torneiro'];
+  const ORDEM_PREF=['Coordenação','Serralheria','Polimento','Instalação','Torneiro'];
   const bySetor={};
-  USUARIOS.forEach(u=>{if(!bySetor[u.setor])bySetor[u.setor]=[];bySetor[u.setor].push(u)});
+  USUARIOS.forEach(u=>{const s=u.setor||'Outros';if(!bySetor[s])bySetor[s]=[];bySetor[s].push(u)});
+  const setores=[...ORDEM_PREF.filter(s=>bySetor[s]),...Object.keys(bySetor).filter(s=>!ORDEM_PREF.includes(s)).sort()];
   sel.innerHTML='<option value="">Selecione...</option>'
-    +ORDEM.filter(s=>bySetor[s]).map(s=>
+    +setores.map(s=>
       `<optgroup label="${s}">`
       +bySetor[s].map(u=>`<option value="${u.id}">${u.apelido||u.nome.split(' ')[0]} — ${u.cargo}</option>`).join('')
       +'</optgroup>'
@@ -4391,6 +4392,17 @@ async function forcarAtualizacaoLista(){
 }
 
 async function init(){
+  // Busca lista de usuários ativos do servidor antes de mostrar o select de login
+  try{
+    const r=await fetch(PROD_API+'/api/users/public');
+    if(r.ok){
+      const users=await r.json();
+      if(Array.isArray(users)&&users.length>0){
+        USUARIOS.length=0;
+        users.forEach(u=>USUARIOS.push({id:u.id,nome:u.nome,apelido:u.apelido||'',cargo:u.cargo||'',setor:u.setor||'',role:u.role||'operador'}));
+      }
+    }
+  }catch(_){}
   _populateLoginSelect();
 
   // Tenta revalidar sessão salva (auto-login)
