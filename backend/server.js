@@ -845,15 +845,29 @@ app.delete('/api/operacoes-avulsas/:id', requireAuth, requireGestor, async (req,
 // ── Proxy: GET /api/propostas — repassa para a API Kommo ─────
 const KOMMO_API_BASE = process.env.KOMMO_API_BASE || 'https://ulhoa-0a02024d350a.herokuapp.com';
 app.get('/api/propostas', async (req, res) => {
-  try {
-    const qs = new URLSearchParams(req.query).toString();
-    const url = `${KOMMO_API_BASE}/api/propostas${qs ? '?' + qs : ''}`;
-    const upstream = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    const body = await upstream.json();
-    res.status(upstream.status).json(body);
-  } catch (err) {
-    console.error('[proxy /api/propostas]', err.message);
-    res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
+  const shouldRetry = req.query.mustRetry === '1';
+  const { mustRetry: _drop, ...fwd } = req.query;
+  const qs = new URLSearchParams(fwd).toString();
+  const url = `${KOMMO_API_BASE}/api/propostas${qs ? '?' + qs : ''}`;
+  const maxTries = shouldRetry ? 5 : 1;
+  for (let t = 1; t <= maxTries; t++) {
+    try {
+      const upstream = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      const body = await upstream.json();
+      // Kommo retorna 200 com propostas:[] quando em rate limit; se a página deveria ter dados, retenta
+      if (shouldRetry && (!body.propostas || body.propostas.length === 0) && t < maxTries) {
+        console.log(`[proxy /api/propostas] tentativa ${t}/${maxTries} vazia (rate limit?) — aguardando ${2*t}s`);
+        await new Promise(w => setTimeout(w, 2000 * t));
+        continue;
+      }
+      return res.status(upstream.status).json(body);
+    } catch (err) {
+      if (t === maxTries) {
+        console.error('[proxy /api/propostas]', err.message);
+        return res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
+      }
+      await new Promise(w => setTimeout(w, 2000 * t));
+    }
   }
 });
 

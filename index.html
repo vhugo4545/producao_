@@ -3537,7 +3537,9 @@ function _deferRender(){
 }
 
 async function fetchPagina(pg,limit=100){
-  const r=await fetch(`${API}?page=${pg}&limit=${limit}`);
+  // mustRetry sinaliza ao servidor que esta página deveria ter dados → servidor retenta com backoff longo
+  const hint=(pg<=_totalPags&&_totalPags>1)||pg===1?'&mustRetry=1':'';
+  const r=await fetch(`${API}?page=${pg}&limit=${limit}${hint}`);
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
 }
@@ -4502,12 +4504,12 @@ async function _carregarPropostasTodas(){
     const limiteMax=_totalPags+3;
     for(let p=2;p<=limiteMax;p++){
       try{
-        await new Promise(r=>setTimeout(r,150)); // respeita rate limit da API
+        await new Promise(r=>setTimeout(r,300)); // respeita rate limit da API
         const jj=await _fetchComRetry(p);
         const propostas=jj.propostas||[];
         if(propostas.length===0){
           paginasVazias++;
-          if(paginasVazias>=2)break; // 2 páginas vazias seguidas = fim real
+          if(paginasVazias>=4)break; // 4 páginas vazias seguidas = fim real
           continue;
         }
         paginasVazias=0;
