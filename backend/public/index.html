@@ -3499,9 +3499,9 @@ let _totalPropostas=0,_totalPags=1,_renderTimer=null;
 function _bannerCarregando(){
   if(!_totalPropostas||allData.length>=_totalPropostas)return'';
   const pct=Math.round(allData.length/_totalPropostas*100);
-  return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:10px;font-size:12px;color:#92400e">
+  return`<div class="js-load-banner" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:10px;font-size:12px;color:#92400e">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;animation:spin 1.2s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-    <span><b>Carregando pedidos…</b> ${allData.length} de ${_totalPropostas} (${pct}%) — os dados abaixo podem estar incompletos. Aguarde o carregamento terminar.</span>
+    <span><b>Carregando pedidos…</b> <span class="js-load-pct">${allData.length} de ${_totalPropostas} (${pct}%)</span> — os dados abaixo podem estar incompletos. Aguarde o carregamento terminar.</span>
   </div>`;
 }
 
@@ -3513,8 +3513,14 @@ function _refreshStats(){
   $('st-resps').textContent=new Set(allData.map(p=>p.camposFormulario?.vendedorResponsavel||'')).size;
   const loaded=allData.length,total=_totalPropostas||loaded;
   $('st-pag').textContent=loaded<total?`${loaded} de ${total} carregando…`:`${loaded} pedidos`;
-  // atualiza barra de progresso
   if(total>0)_setLoadBar(Math.round(loaded/total*100));
+  // Atualiza todos os banners de carregamento visíveis em tempo real
+  document.querySelectorAll('.js-load-banner').forEach(el=>{
+    if(!_totalPropostas||allData.length>=_totalPropostas){el.style.display='none';return;}
+    const pct=Math.round(allData.length/_totalPropostas*100);
+    const sp=el.querySelector('.js-load-pct');
+    if(sp)sp.textContent=`${allData.length} de ${_totalPropostas} (${pct}%)`;
+  });
 }
 function _deferRender(){
   clearTimeout(_renderTimer);
