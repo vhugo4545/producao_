@@ -857,6 +857,53 @@ app.get('/api/propostas', async (req, res) => {
   }
 });
 
+// ── GET /api/propostas/all — busca TODAS as páginas server-side e devolve em uma resposta ──
+app.get('/api/propostas/all', requireAuth, requireGestor, async (_req, res) => {
+  async function fetchPagKommo(pg) {
+    for (let t = 1; t <= 3; t++) {
+      try {
+        const url = `${KOMMO_API_BASE}/api/propostas?page=${pg}&limit=100`;
+        const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const body = await r.json();
+        if ((!body.propostas || body.propostas.length === 0) && t < 3) {
+          await new Promise(w => setTimeout(w, 500 * t));
+          continue;
+        }
+        return body;
+      } catch (e) {
+        if (t === 3) throw e;
+        await new Promise(w => setTimeout(w, 1000 * t));
+      }
+    }
+  }
+
+  try {
+    const all = [];
+    const first = await fetchPagKommo(1);
+    const totalPags = first.totalPaginas || 1;
+    const total    = first.total || 0;
+    (first.propostas || []).forEach(p => all.push(p));
+    console.log(`[propostas/all] total declarado: ${total}, páginas: ${totalPags}`);
+
+    let emptyStreak = 0;
+    for (let p = 2; p <= totalPags + 3 && emptyStreak < 2; p++) {
+      await new Promise(w => setTimeout(w, 120)); // respeita rate limit
+      const body = await fetchPagKommo(p);
+      const props = body?.propostas || [];
+      if (props.length === 0) { emptyStreak++; continue; }
+      emptyStreak = 0;
+      props.forEach(p => all.push(p));
+    }
+
+    console.log(`[propostas/all] ${all.length} propostas entregues`);
+    res.json({ propostas: all, total: all.length, totalPaginas: 1 });
+  } catch (err) {
+    console.error('[GET /api/propostas/all]', err.message);
+    res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
+  }
+});
+
 // ── Frontend estático ────────────────────────────────────────
 const PUBLIC = path.join(__dirname, 'public');
 app.use(express.static(PUBLIC, {

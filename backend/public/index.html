@@ -3497,12 +3497,15 @@ function toggleResp(sid){
 let _totalPropostas=0,_totalPags=1,_renderTimer=null;
 
 function _bannerCarregando(){
-  if(!_totalPropostas||allData.length>=_totalPropostas)return'';
+  if(!_totalPropostas)return'';
+  if(allData.length>=_totalPropostas)return'';
+  const spinSvg='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;animation:spin 1.2s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+  const base='display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:10px;font-size:12px;color:#92400e';
+  // _totalPropostas=1 é o sentinela "buscando do servidor"
+  if(_totalPropostas===1&&allData.length===0)
+    return`<div class="js-load-banner" style="${base}">${spinSvg}<span><b>Buscando todos os pedidos do servidor…</b> Aguarde.</span></div>`;
   const pct=Math.round(allData.length/_totalPropostas*100);
-  return`<div class="js-load-banner" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:10px;font-size:12px;color:#92400e">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;animation:spin 1.2s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-    <span><b>Carregando pedidos…</b> <span class="js-load-pct">${allData.length} de ${_totalPropostas} (${pct}%)</span> — os dados abaixo podem estar incompletos. Aguarde o carregamento terminar.</span>
-  </div>`;
+  return`<div class="js-load-banner" style="${base}">${spinSvg}<span><b>Carregando pedidos…</b> <span class="js-load-pct">${allData.length} de ${_totalPropostas} (${pct}%)</span> — os dados abaixo podem estar incompletos.</span></div>`;
 }
 
 function _refreshStats(){
@@ -4466,70 +4469,27 @@ async function _carregarContextoOperador(userId){
 }
 
 // Carrega TODOS os pedidos da API Kommo — só para o gestor
+// O servidor faz toda a paginação e entrega de uma vez, evitando rate limit no browser
 async function _carregarPropostasTodas(){
-  async function _fetchComRetry(pg,tentativas=3){
-    for(let t=1;t<=tentativas;t++){
-      try{
-        const r=await fetchPagina(pg,100);
-        // Trata resposta vazia como falha recuperável (rate limiting retorna 200 com []  )
-        if(t<tentativas&&(!r.propostas||r.propostas.length===0)&&pg<=_totalPags){
-          await new Promise(r2=>setTimeout(r2,500*t));
-          continue;
-        }
-        return r;
-      }catch(e){
-        if(t===tentativas)throw e;
-        await new Promise(r=>setTimeout(r,1000*t));
-      }
-    }
-  }
-
   try{
-    const j=await _fetchComRetry(1);
-    _totalPropostas=j.total||0;
-    _totalPags=j.totalPaginas||1;
+    _totalPropostas=1; // sentinela: mostra "Buscando do servidor…"
+    _refreshStats();
+
+    const r=await fetch(PROD_API+'/api/propostas/all',{
+      headers:{'Authorization':'Bearer '+_authToken},
+      signal:AbortSignal.timeout(180000)
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
 
     const byId=new Map(allData.map(p=>[p._id,p]));
-    (j.propostas||[]).forEach(p=>byId.set(p._id,p));
+    (j.propostas||[]).forEach(p=>{byId.set(p._id,p);_indexarProds(p);});
     allData=[...byId.values()];
 
     await loadProducaoStates();
-    _render();
-
-    // Carrega demais páginas até receber vazia OU ultrapassar _totalPags+3 (segurança)
-    const paginasFalhas=[];
-    let paginasVazias=0;
-    const limiteMax=_totalPags+3;
-    for(let p=2;p<=limiteMax;p++){
-      try{
-        await new Promise(r=>setTimeout(r,150)); // respeita rate limit da API
-        const jj=await _fetchComRetry(p);
-        const propostas=jj.propostas||[];
-        if(propostas.length===0){
-          paginasVazias++;
-          if(paginasVazias>=2)break; // 2 páginas vazias seguidas = fim real
-          continue;
-        }
-        paginasVazias=0;
-        const byId2=new Map(allData.map(x=>[x._id,x]));
-        propostas.forEach(x=>byId2.set(x._id,x));
-        allData=[...byId2.values()];
-        propostas.forEach(x=>_indexarProds(x));
-        _refreshStats();
-        _deferRender();
-      }catch(_){
-        paginasFalhas.push(p);
-      }
-    }
-
     _totalPropostas=allData.length;
     _refreshStats();
     _render();
-
-    if(paginasFalhas.length>0){
-      toast(`⚠️ ${paginasFalhas.length} página(s) não carregaram após 3 tentativas. Clique em Atualizar para tentar novamente.`);
-      console.warn('[carregamento] páginas com falha:', paginasFalhas);
-    }
 
     // Atualiza ProposalCache no servidor para que operadores recebam dados frescos
     const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
