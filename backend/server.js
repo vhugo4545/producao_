@@ -845,29 +845,42 @@ app.delete('/api/operacoes-avulsas/:id', requireAuth, requireGestor, async (req,
 // ── Proxy: GET /api/propostas — repassa para a API Kommo ─────
 const KOMMO_API_BASE = process.env.KOMMO_API_BASE || 'https://ulhoa-0a02024d350a.herokuapp.com';
 app.get('/api/propostas', async (req, res) => {
-  const shouldRetry = req.query.mustRetry === '1';
   const { mustRetry: _drop, ...fwd } = req.query;
+  const page  = parseInt(fwd.page)  || 1;
+  const limit = parseInt(fwd.limit) || 100;
   const qs = new URLSearchParams(fwd).toString();
-  const url = `${KOMMO_API_BASE}/api/propostas${qs ? '?' + qs : ''}`;
-  const maxTries = shouldRetry ? 5 : 1;
-  for (let t = 1; t <= maxTries; t++) {
-    try {
-      const upstream = await fetch(url, { signal: AbortSignal.timeout(20000) });
-      const body = await upstream.json();
-      // Kommo retorna 200 com propostas:[] quando em rate limit; se a página deveria ter dados, retenta
-      if (shouldRetry && (!body.propostas || body.propostas.length === 0) && t < maxTries) {
-        console.log(`[proxy /api/propostas] tentativa ${t}/${maxTries} vazia (rate limit?) — aguardando ${2*t}s`);
-        await new Promise(w => setTimeout(w, 2000 * t));
-        continue;
-      }
-      return res.status(upstream.status).json(body);
-    } catch (err) {
-      if (t === maxTries) {
-        console.error('[proxy /api/propostas]', err.message);
-        return res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
-      }
-      await new Promise(w => setTimeout(w, 2000 * t));
+  const base = `${KOMMO_API_BASE}/api/propostas`;
+  try {
+    const up   = await fetch(`${base}${qs ? '?' + qs : ''}`, { signal: AbortSignal.timeout(20000) });
+    const body = await up.json();
+    if (up.status !== 500) return res.status(up.status).json(body);
+
+    // 500 = proposta(s) corrompida(s) na página — divide em sub-lotes de 10
+    console.log(`[proxy /api/propostas] page=${page} limit=${limit} → 500, recuperando por sub-lotes`);
+    const propostas = [];
+    const subLim = 10;
+    for (let i = 0; i < limit; i += subLim) {
+      const off   = (page - 1) * limit + i;
+      const subPg = Math.floor(off / subLim) + 1;
+      try {
+        const r = await fetch(`${base}?page=${subPg}&limit=${subLim}`, { signal: AbortSignal.timeout(10000) });
+        const b = await r.json();
+        if (r.status !== 500) { propostas.push(...(b.propostas || [])); continue; }
+        // Sub-lote também falhou: proposta a proposta
+        for (let j = 0; j < subLim; j++) {
+          try {
+            const r2 = await fetch(`${base}?page=${off + j + 1}&limit=1`, { signal: AbortSignal.timeout(10000) });
+            if (r2.ok) { const b2 = await r2.json(); propostas.push(...(b2.propostas || [])); }
+            else console.log(`[proxy] proposta corrompida offset=${off + j + 1}, ignorando`);
+          } catch {}
+        }
+      } catch {}
     }
+    console.log(`[proxy /api/propostas] page=${page} recuperou ${propostas.length} via sub-lotes`);
+    res.json({ propostas, total: propostas.length, totalPaginas: 1 });
+  } catch (err) {
+    console.error('[proxy /api/propostas]', err.message);
+    res.status(502).json({ error: 'Erro ao buscar propostas: ' + err.message });
   }
 });
 

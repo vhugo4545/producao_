@@ -3537,9 +3537,7 @@ function _deferRender(){
 }
 
 async function fetchPagina(pg,limit=100){
-  // mustRetry sinaliza ao servidor que esta página deveria ter dados → servidor retenta com backoff longo
-  const hint=(pg<=_totalPags&&_totalPags>1)||pg===1?'&mustRetry=1':'';
-  const r=await fetch(`${API}?page=${pg}&limit=${limit}${hint}`);
+  const r=await fetch(`${API}?page=${pg}&limit=${limit}`);
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
 }
