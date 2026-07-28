@@ -4469,10 +4469,17 @@ async function _carregarContextoOperador(userId){
 async function _carregarPropostasTodas(){
   async function _fetchComRetry(pg,tentativas=3){
     for(let t=1;t<=tentativas;t++){
-      try{return await fetchPagina(pg,100);}
-      catch(e){
+      try{
+        const r=await fetchPagina(pg,100);
+        // Trata resposta vazia como falha recuperável (rate limiting retorna 200 com []  )
+        if(t<tentativas&&(!r.propostas||r.propostas.length===0)&&pg<=_totalPags){
+          await new Promise(r2=>setTimeout(r2,500*t));
+          continue;
+        }
+        return r;
+      }catch(e){
         if(t===tentativas)throw e;
-        await new Promise(r=>setTimeout(r,1000*t)); // espera 1s, 2s, 3s
+        await new Promise(r=>setTimeout(r,1000*t));
       }
     }
   }
@@ -4489,15 +4496,25 @@ async function _carregarPropostasTodas(){
     await loadProducaoStates();
     _render();
 
-    // Demais páginas em background — com retry e sem parar no primeiro erro
+    // Carrega demais páginas até receber vazia OU ultrapassar _totalPags+3 (segurança)
     const paginasFalhas=[];
-    for(let p=2;p<=_totalPags;p++){
+    let paginasVazias=0;
+    const limiteMax=_totalPags+3;
+    for(let p=2;p<=limiteMax;p++){
       try{
+        await new Promise(r=>setTimeout(r,150)); // respeita rate limit da API
         const jj=await _fetchComRetry(p);
+        const propostas=jj.propostas||[];
+        if(propostas.length===0){
+          paginasVazias++;
+          if(paginasVazias>=2)break; // 2 páginas vazias seguidas = fim real
+          continue;
+        }
+        paginasVazias=0;
         const byId2=new Map(allData.map(x=>[x._id,x]));
-        (jj.propostas||[]).forEach(x=>byId2.set(x._id,x));
+        propostas.forEach(x=>byId2.set(x._id,x));
         allData=[...byId2.values()];
-        (jj.propostas||[]).forEach(x=>_indexarProds(x));
+        propostas.forEach(x=>_indexarProds(x));
         _refreshStats();
         _deferRender();
       }catch(_){
