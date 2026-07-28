@@ -4467,8 +4467,18 @@ async function _carregarContextoOperador(userId){
 
 // Carrega TODOS os pedidos da API Kommo — só para o gestor
 async function _carregarPropostasTodas(){
+  async function _fetchComRetry(pg,tentativas=3){
+    for(let t=1;t<=tentativas;t++){
+      try{return await fetchPagina(pg,100);}
+      catch(e){
+        if(t===tentativas)throw e;
+        await new Promise(r=>setTimeout(r,1000*t)); // espera 1s, 2s, 3s
+      }
+    }
+  }
+
   try{
-    const j=await fetchPagina(1,100);
+    const j=await _fetchComRetry(1);
     _totalPropostas=j.total||0;
     _totalPags=j.totalPaginas||1;
 
@@ -4479,24 +4489,31 @@ async function _carregarPropostasTodas(){
     await loadProducaoStates();
     _render();
 
-    // Demais páginas em background
+    // Demais páginas em background — com retry e sem parar no primeiro erro
+    const paginasFalhas=[];
     for(let p=2;p<=_totalPags;p++){
       try{
-        const jj=await fetchPagina(p,100);
+        const jj=await _fetchComRetry(p);
         const byId2=new Map(allData.map(x=>[x._id,x]));
         (jj.propostas||[]).forEach(x=>byId2.set(x._id,x));
         allData=[...byId2.values()];
-        // Indexa numeração dos itens das novas propostas (necessário para itemLabel funcionar)
         (jj.propostas||[]).forEach(x=>_indexarProds(x));
         _refreshStats();
         _deferRender();
-      }catch(_){break;}
+      }catch(_){
+        paginasFalhas.push(p);
+      }
     }
 
-    // Garante que o banner de carregamento suma mesmo que o total da API não bata exatamente
     _totalPropostas=allData.length;
     _refreshStats();
     _render();
+
+    if(paginasFalhas.length>0){
+      toast(`⚠️ ${paginasFalhas.length} página(s) não carregaram após 3 tentativas. Clique em Atualizar para tentar novamente.`);
+      console.warn('[carregamento] páginas com falha:', paginasFalhas);
+    }
+
     // Atualiza ProposalCache no servidor para que operadores recebam dados frescos
     const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
     if(ativas.length>0){
