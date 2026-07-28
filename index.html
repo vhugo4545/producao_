@@ -735,6 +735,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H2a2 2 0 01-2-2V2zm4 1a1 1 0 000 2h8a1 1 0 000-2H4zm0 4a1 1 0 000 2h4a1 1 0 000-2H4zm0 4a1 1 0 000 2h2a1 1 0 000-2H4zm7-4a1 1 0 00-1 1v3a1 1 0 002 0V7a1 1 0 00-1-1z"/></svg>
     Alocação
   </div>
+  <div class="sb-item" id="sb-historico" onclick="navToHistorico()" style="display:none">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zM0 8a8 8 0 1116 0A8 8 0 010 8zm7.5-4.5a.5.5 0 011 0v4.25l2.75 1.65a.5.5 0 01-.5.86L7.5 8.5V3.5z"/></svg>
+    Histórico
+  </div>
   <div class="sb-bottom">
     <div class="sb-item" onclick="logout()" style="color:rgba(255,255,255,.35);font-size:12px;margin-bottom:4px">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M10 3.5a.5.5 0 00-.5-.5h-6a.5.5 0 00-.5.5v9a.5.5 0 00.5.5h6a.5.5 0 00.5-.5V10a.5.5 0 011 0v2.5A1.5 1.5 0 019.5 14h-6A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2h6A1.5 1.5 0 0111 3.5V6a.5.5 0 01-1 0V3.5z"/><path d="M15.854 8.354a.5.5 0 000-.708l-3-3a.5.5 0 10-.708.708L14.293 7.5H5.5a.5.5 0 000 1h8.793l-2.147 2.146a.5.5 0 00.708.708l3-3z"/></svg>
@@ -908,6 +912,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
     <!-- P8: ALOCAÇÃO POR OPERADOR -->
     <div class="page" id="p8">
       <div id="p8-body" style="padding-bottom:32px"></div>
+    </div>
+
+    <!-- P9: HISTÓRICO DE PRODUÇÃO -->
+    <div class="page" id="p9">
+      <div id="p9-body" style="padding-bottom:32px"></div>
     </div>
 
   </div>
@@ -1808,6 +1817,7 @@ function _entrarComoUsuario(user){
   $('sb-quadro').style.display='flex';
   $('sb-usuarios').style.display=isGestorRole?'flex':'none';
   $('sb-alocacao').style.display=isGestorRole?'flex':'none';
+  $('sb-historico').style.display=isGestorRole?'flex':'none';
   $('p0-screen').style.display='none';
   $('shell').style.display='flex';
   const av=$('sb-av'),nm=$('sb-uname'),rl=$('sb-urole');
@@ -4158,6 +4168,108 @@ async function _alocacaoSincronizarEExibir(){
     }
   }catch(e){console.warn('[alocacao] sync completo falhou:',e.message);}
   _renderAlocacaoConteudo();
+}
+
+// ── Histórico de Produção ─────────────────────────────────────
+function navToHistorico(){
+  if(!currentUser)return;
+  curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  setSbActive('sb-historico');
+  setBread([{label:'Histórico de Produção',active:true}]);
+  setTitle('Histórico de Produção');
+  showPage('p9');
+  renderHistorico();
+}
+
+function renderHistorico(){
+  const body=$('p9-body');if(!body)return;
+  const filtro=($('hist-busca')?.value||'').toLowerCase().trim();
+
+  function fmtDtTs(ms){
+    if(!ms)return'—';
+    const d=new Date(ms);
+    return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+      +' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  const stateBadge=s=>{
+    if(s==='done')    return'<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;font-weight:700">Concluído</span>';
+    if(s==='active')  return'<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;font-weight:700">Em andamento</span>';
+    if(s==='paused')  return'<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;font-weight:700">Pausado</span>';
+    if(s==='pending') return'<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#5b21b6;font-weight:700">Demandado</span>';
+    return'';
+  };
+
+  const result=[];
+  allData.forEach(proj=>{
+    const numPed=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'#'+proj.numeroProposta;
+    const cliente=proj.camposFormulario?.clientes?.[0]?.nome_razao_social||'';
+    if(filtro&&!numPed.toLowerCase().includes(filtro)&&!cliente.toLowerCase().includes(filtro))return;
+    const itens=[];
+    (proj.grupos||[]).forEach(grupo=>{
+      getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
+        const etapas=getEtapas(prod.key);
+        etapas.forEach((e,idx)=>{
+          if(e.state==='idle'&&!e.firstStartAt&&!(e.baseElapsed>0))return;
+          const workers=e.workers?.length>0
+            ?e.workers
+            :(e.assignedTo?[{userId:e.assignedTo,baseElapsed:e.baseElapsed,startAt:e.startAt}]:[]);
+          const nomes=workers.map(w=>USUARIOS.find(u=>u.id===w.userId)?.nome.split(' ')[0]||w.userId).filter(Boolean).join(', ');
+          const elapsed=etapaElapsed(prod.key,idx);
+          itens.push({grupo:grupo.nome||'',prod:prod.nome||prod.key,etapaNome:ETAPAS[idx]?.nome||'—',state:e.state,nomes,firstStartAt:e.firstStartAt,endAt:e.endAt,elapsed});
+        });
+      });
+    });
+    if(itens.length)result.push({numPed,cliente,itens});
+  });
+
+  const thStyle='padding:6px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap';
+  const tdStyle='padding:7px 12px;border-top:1px solid var(--bd);font-size:12px';
+
+  const cards=result.map(p=>{
+    const rows=p.itens.map(it=>`<tr>
+      <td style="${tdStyle};color:var(--tx3)">${esc(it.grupo)}</td>
+      <td style="${tdStyle};color:var(--tx);font-weight:500">${esc(it.prod)}</td>
+      <td style="${tdStyle};color:var(--tx2)">${esc(it.etapaNome)}</td>
+      <td style="${tdStyle};color:var(--tx2)">${esc(it.nomes||'—')}</td>
+      <td style="${tdStyle}">${stateBadge(it.state)}</td>
+      <td style="${tdStyle};font-family:'Inconsolata',monospace;color:var(--tx2);white-space:nowrap">${fmtDtTs(it.firstStartAt)}</td>
+      <td style="${tdStyle};font-family:'Inconsolata',monospace;color:var(--tx2);white-space:nowrap">${fmtDtTs(it.endAt)}</td>
+      <td style="${tdStyle};font-family:'Inconsolata',monospace;color:var(--accent);text-align:right;white-space:nowrap;font-weight:600">${it.elapsed>0?fmtTime(it.elapsed):'—'}</td>
+    </tr>`).join('');
+    return`<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;margin-bottom:16px;box-shadow:var(--shadow)">
+      <div style="padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:14px;font-weight:700;color:var(--accent)">${esc(p.numPed)}</span>
+        ${p.cliente?`<span style="font-size:12px;color:var(--tx3)">${esc(p.cliente)}</span>`:''}
+        <span style="margin-left:auto;font-size:11px;color:var(--tx3)">${p.itens.length} item${p.itens.length!==1?'s':''}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg3)">
+            <th style="${thStyle}">Grupo</th>
+            <th style="${thStyle}">Produto</th>
+            <th style="${thStyle}">Etapa</th>
+            <th style="${thStyle}">Operador</th>
+            <th style="${thStyle}">Estado</th>
+            <th style="${thStyle}">Início</th>
+            <th style="${thStyle}">Conclusão</th>
+            <th style="${thStyle};text-align:right">Tempo</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+
+  const searchBar=`<div style="padding:4px 0 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+    <input id="hist-busca" type="text" placeholder="Buscar por pedido ou cliente…"
+      oninput="renderHistorico()" value="${esc(filtro)}"
+      style="flex:1;min-width:200px;max-width:380px;box-sizing:border-box;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:9px 14px;border-radius:9px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx);outline:none">
+    <span style="font-size:12px;color:var(--tx3)">${result.length} pedido${result.length!==1?'s':''} com atividade</span>
+  </div>`;
+
+  body.innerHTML=searchBar+(result.length
+    ? cards
+    : `<div style="font-size:13px;color:var(--tx3);padding:24px 0">Nenhuma atividade registrada${filtro?' para "'+esc(filtro)+'"':''}.</div>`);
 }
 
 let _alocacaoVista='operador';
