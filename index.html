@@ -992,20 +992,7 @@ const _expandedAreas=new Set();
 // mapa areaKey → [prodKeys] — populado no render para seleção funcionar mesmo com área fechada
 const _areaProdKeys={};
 
-// ── CACHE DE PROPOSTAS ATIVAS ─────────────────────────────────
-const _CACHE_KEY='ulhoa_proposals_v2';
-const _CACHE_TTL=30*60*1000; // 30 minutos
-function _saveCache(){
-  const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
-  if(ativas.length>0)localStorage.setItem(_CACHE_KEY,JSON.stringify({ts:Date.now(),data:ativas}));
-}
-function _loadCache(){
-  try{
-    const c=JSON.parse(localStorage.getItem(_CACHE_KEY)||'null');
-    if(c&&Date.now()-c.ts<_CACHE_TTL&&c.data?.length>0)return c.data;
-  }catch(_){}
-  return null;
-}
+// Cache de propostas no localStorage removido — dados sempre frescos do servidor
 // IDs/keys ocultos (soft-delete) — localStorage como cache, servidor como fonte permanente
 const _hiddenPedidos=new Set(JSON.parse(localStorage.getItem('hidden_pedidos')||'[]'));
 const _hiddenProdutos=new Set(JSON.parse(localStorage.getItem('hidden_produtos')||'[]'));
@@ -4036,12 +4023,33 @@ function _onVisibilityChange(){
 let _quadroInterval=null;
 let _qdlFiltFunc='',_qdlFiltProd='',_qdlFiltEtapa='',_qdlFiltPeriodo='';
 
-function navToAlocacao(){
+async function navToAlocacao(){
   if(!currentUser)return;
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
   setSbActive('sb-alocacao');
   setBread([{label:'Alocação',active:true}]);setTitle('Alocação por Operador');
   renderAlocacao();showPage('p8');
+  await _alocacaoSincronizarEExibir();
+}
+
+async function _alocacaoSincronizarEExibir(){
+  const wrap=$('aloc-conteudo');
+  if(wrap)wrap.innerHTML='<div style="padding:24px 0;color:var(--tx3);font-size:13px">Sincronizando tarefas…</div>';
+  try{
+    const r=await fetch(PROD_API+'/api/producao',{signal:AbortSignal.timeout(12000)});
+    if(r.ok){
+      const docs=await r.json();
+      docs.forEach(doc=>{
+        if(!doc.key||!Array.isArray(doc.etapas))return;
+        if(_saveTimer[doc.key]||_pendingSaves?.has(doc.key))return;
+        pEtapas[doc.key]=doc.etapas;
+        pState[doc.key]={state:derivedState(doc.key)};
+        _saveLocal(doc.key);
+      });
+      _lastSyncTs=Date.now();
+    }
+  }catch(e){console.warn('[alocacao] sync completo falhou:',e.message);}
+  _renderAlocacaoConteudo();
 }
 
 let _alocacaoVista='operador';
@@ -4062,7 +4070,6 @@ function renderAlocacao(){
       <button id="aloc-btn-pedido" onclick="_setAlocacaoVista('pedido')" style="padding:7px 16px;border-radius:8px;border:1px solid var(--bd);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;background:transparent;color:var(--tx2)">Por Pedido</button>
     </div>
     <div id="aloc-conteudo"></div>`;
-  _renderAlocacaoConteudo();
 }
 
 function _renderAlocacaoConteudo(){
@@ -4435,16 +4442,6 @@ async function _carregarContextoOperador(userId){
 
 // Carrega TODOS os pedidos da API Kommo — só para o gestor
 async function _carregarPropostasTodas(){
-  // Cache local para renderização rápida inicial
-  const lc=_loadCache();
-  if(lc){
-    allData=lc;
-    await loadProducaoStates();
-    _render();
-    console.log('[cache] local: '+lc.length+' propostas carregadas');
-  }
-
-  // Revalida da API Kommo (sempre busca dados frescos)
   try{
     const j=await fetchPagina(1,100);
     _totalPropostas=j.total||0;
@@ -4472,7 +4469,6 @@ async function _carregarPropostasTodas(){
     }
 
     _render();
-    _saveCache();
     // Atualiza ProposalCache no servidor para que operadores recebam dados frescos
     const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
     if(ativas.length>0){
@@ -4484,8 +4480,7 @@ async function _carregarPropostasTodas(){
       }
     }
   }catch(e){
-    if(!lc)
-      $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+    $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
   }
 }
 
