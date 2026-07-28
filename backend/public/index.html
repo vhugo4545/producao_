@@ -4481,6 +4481,8 @@ async function _carregarPropostasTodas(){
       }catch(_){break;}
     }
 
+    // Garante que o banner de carregamento suma mesmo que o total da API não bata exatamente
+    _totalPropostas=allData.length;
     _render();
     // Atualiza ProposalCache no servidor para que operadores recebam dados frescos
     const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
