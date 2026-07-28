@@ -3527,7 +3527,12 @@ function _deferRender(){
   _renderTimer=setTimeout(()=>{
     if(!currentUser)return;
     if(currentUser.role==='operador')renderMinhasTarefas();
-    else renderP1();
+    else{
+      renderP1();
+      if($('p6')?.classList.contains('active'))renderDash();
+      if($('p7')?.classList.contains('active'))renderQuadro();
+      if($('p8')?.classList.contains('active'))_renderAlocacaoConteudo();
+    }
   },800);
 }
 
@@ -4490,6 +4495,7 @@ async function _carregarPropostasTodas(){
 
     // Garante que o banner de carregamento suma mesmo que o total da API não bata exatamente
     _totalPropostas=allData.length;
+    _refreshStats();
     _render();
     // Atualiza ProposalCache no servidor para que operadores recebam dados frescos
     const ativas=allData.filter(p=>!!(p.numeroPedido?.trim()||p.camposFormulario?.numeroPedido?.trim()));
