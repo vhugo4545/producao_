@@ -4141,32 +4141,12 @@ function _onVisibilityChange(){
 let _quadroInterval=null;
 let _qdlFiltFunc='',_qdlFiltProd='',_qdlFiltEtapa='',_qdlFiltPeriodo='';
 
-async function navToAlocacao(){
+function navToAlocacao(){
   if(!currentUser)return;
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
   setSbActive('sb-alocacao');
   setBread([{label:'Alocação',active:true}]);setTitle('Alocação por Operador');
   renderAlocacao();showPage('p8');
-  await _alocacaoSincronizarEExibir();
-}
-
-async function _alocacaoSincronizarEExibir(){
-  const wrap=$('aloc-conteudo');
-  if(wrap)wrap.innerHTML='<div style="padding:24px 0;color:var(--tx3);font-size:13px">Sincronizando tarefas…</div>';
-  try{
-    const r=await fetch(PROD_API+'/api/producao',{signal:AbortSignal.timeout(12000)});
-    if(r.ok){
-      const docs=await r.json();
-      docs.forEach(doc=>{
-        if(!doc.key||!Array.isArray(doc.etapas))return;
-        if(_saveTimer[doc.key]||_pendingSaves?.has(doc.key))return;
-        pEtapas[doc.key]=doc.etapas;
-        pState[doc.key]={state:derivedState(doc.key)};
-        _saveLocal(doc.key);
-      });
-      _lastSyncTs=Date.now();
-    }
-  }catch(e){console.warn('[alocacao] sync completo falhou:',e.message);}
   _renderAlocacaoConteudo();
 }
 
@@ -5002,6 +4982,17 @@ function _renderLinkedBadge(){
   if(n>1){el.style.display='';el.textContent='⚡ '+n+' itens simultâneos';}
   else el.style.display='none';
 }
+
+// Impede que cliques em áreas não-interativas dentro de modais roubem o foco dos inputs
+document.addEventListener('mousedown',function(e){
+  const ids=['oa-overlay','mi-overlay','dm-overlay','rm-overlay','ep-overlay','modal-usuarios','modal-primeiro-acesso'];
+  for(const id of ids){
+    const ov=document.getElementById(id);
+    if(!ov||!ov.style.display||ov.style.display==='none')continue;
+    if(ov.contains(e.target)&&!e.target.closest('input,textarea,button,select,label,[tabindex],[contenteditable]'))e.preventDefault();
+    break;
+  }
+},true);
 </script>
 </body>
 </html>
