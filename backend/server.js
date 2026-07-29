@@ -819,7 +819,7 @@ app.post('/api/operacoes-avulsas', requireAuth, requireGestor, async (req, res) 
   const { titulo, descricao, assignedTo } = req.body;
   if (!titulo?.trim() || !assignedTo) return res.status(400).json({ error: 'titulo e assignedTo obrigatórios' });
   try {
-    const op = await OperacaoAvulsa.create({ titulo: titulo.trim(), descricao: descricao?.trim() || '', assignedTo, createdBy: req.userId });
+    const op = await OperacaoAvulsa.create({ titulo: titulo.trim(), descricao: descricao?.trim() || '', assignedTo, createdBy: req.user.id });
     res.status(201).json(op);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
