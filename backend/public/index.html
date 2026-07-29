@@ -940,6 +940,9 @@ let _lastSyncTs=0;
 let _pollInterval=null;
 let _operadorPronto=false; // true após _carregarContextoOperador terminar (com ou sem tarefas)
 const _POLL_MS=5000;
+let _histPage=1;
+const _HIST_PER_PAGE=30;
+let _histSearchTimer=null;
 
 let USUARIOS=[
   {id:'luizao',nome:'Luiz Fernando Lima',apelido:'Luizão',cargo:'Coordenador de Produção',setor:'Coordenação',role:'gestor'},
@@ -3630,6 +3633,7 @@ function _deferRender(){
       if($('p6')?.classList.contains('active'))renderDash();
       if($('p7')?.classList.contains('active'))renderQuadro();
       if($('p8')?.classList.contains('active'))_renderAlocacaoConteudo();
+      if($('p9')?.classList.contains('active'))renderHistorico();
     }
   },800);
 }
@@ -4154,6 +4158,7 @@ function navToAlocacao(){
 function navToHistorico(){
   if(!currentUser)return;
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
+  _histPage=1;
   setSbActive('sb-historico');
   setBread([{label:'Histórico de Produção',active:true}]);
   setTitle('Histórico de Produção');
@@ -4161,15 +4166,19 @@ function navToHistorico(){
   renderHistorico();
 }
 
+function _histSearch(){
+  clearTimeout(_histSearchTimer);
+  _histSearchTimer=setTimeout(()=>{_histPage=1;renderHistorico();},300);
+}
+
 function renderHistorico(){
   const body=$('p9-body');if(!body)return;
   const filtro=($('hist-busca')?.value||'').toLowerCase().trim();
 
+  const dtFmt=new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
   function fmtDtTs(ms){
     if(!ms)return'—';
-    const d=new Date(ms);
-    return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})
-      +' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return dtFmt.format(new Date(ms)).replace(',','');
   }
   const stateBadge=s=>{
     if(s==='done')    return'<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;font-weight:700">Concluído</span>';
@@ -4205,7 +4214,10 @@ function renderHistorico(){
   const thStyle='padding:6px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap';
   const tdStyle='padding:7px 12px;border-top:1px solid var(--bd);font-size:12px';
 
-  const cards=result.map(p=>{
+  const visivel=result.slice(0,_histPage*_HIST_PER_PAGE);
+  const temMais=result.length>visivel.length;
+
+  const cards=visivel.map(p=>{
     const rows=p.itens.map(it=>`<tr>
       <td style="${tdStyle};color:var(--tx3)">${esc(it.grupo)}</td>
       <td style="${tdStyle};color:var(--tx);font-weight:500">${esc(it.prod)}</td>
@@ -4240,15 +4252,19 @@ function renderHistorico(){
     </div>`;
   }).join('');
 
+  const btnMais=temMais
+    ?`<div style="text-align:center;padding:8px 0 24px"><button onclick="_histPage++;renderHistorico()" style="padding:9px 24px;border-radius:9px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Carregar mais (${result.length-visivel.length} restantes)</button></div>`
+    :'';
+
   const searchBar=`<div style="padding:4px 0 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
     <input id="hist-busca" type="text" placeholder="Buscar por pedido ou cliente…"
-      oninput="renderHistorico()" value="${esc(filtro)}"
+      oninput="_histSearch()" value="${esc(filtro)}"
       style="flex:1;min-width:200px;max-width:380px;box-sizing:border-box;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:9px 14px;border-radius:9px;border:1px solid var(--bd);background:var(--bg2);color:var(--tx);outline:none">
     <span style="font-size:12px;color:var(--tx3)">${result.length} pedido${result.length!==1?'s':''} com atividade</span>
   </div>`;
 
   body.innerHTML=searchBar+(result.length
-    ? cards
+    ? cards+btnMais
     : `<div style="font-size:13px;color:var(--tx3);padding:24px 0">Nenhuma atividade registrada${filtro?' para "'+esc(filtro)+'"':''}.</div>`);
 }
 
