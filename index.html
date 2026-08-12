@@ -1128,6 +1128,7 @@ function addDiasUteisDate(dateStr,dias){if(!dateStr||!dias)return null;const d=n
 function fmtPrevisao(dateStr){if(!dateStr)return'';const d=new Date(dateStr+'T12:00:00');if(isNaN(d))return'';return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function _gPrz(g,base){return addDiasUteis(base,g.parametros?.previsaoEntrega);}
 function maxPrevisaoProj(proj){const base=proj.camposFormulario?.dataProjetoAssinado;const dates=(proj.grupos||[]).map(g=>addDiasUteisDate(base,g.parametros?.previsaoEntrega)).filter(Boolean).sort((a,b)=>a-b);return dates.length?dates[dates.length-1].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';}
+function minPrevisaoProj(proj){const base=proj.camposFormulario?.dataProjetoAssinado;const dates=(proj.grupos||[]).map(g=>addDiasUteisDate(base,g.parametros?.previsaoEntrega)).filter(Boolean).sort((a,b)=>a-b);return dates.length?dates[0].toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';}
 
 function _chipPrevisao(dateStr){return '<span style="font-size:10px;font-weight:600;color:'+(dateStr?'var(--accent)':'var(--tx3)')+';background:'+(dateStr?'var(--accent-light)':'var(--bg3)')+';border:1px solid '+(dateStr?'var(--accent)':'var(--bd)')+';border-radius:5px;padding:1px 6px;white-space:nowrap;flex-shrink:0">📅 '+(dateStr||'—')+'</span>';}
 function _infoTag(label,value){const ok=!!value;const c=ok?'var(--accent)':'#dc2626';const bg=ok?'var(--accent-light)':'#fef2f2';const bd=ok?'var(--accent)':'#fca5a5';return '<span style="font-size:10px;font-weight:700;color:'+c+';background:'+bg+';border:1px solid '+bd+';border-radius:4px;padding:1px 6px;white-space:nowrap">'+label+(value?' '+value:'')+'</span>';}
@@ -2653,6 +2654,7 @@ function renderP1(){
           +'<span style="font-size:14px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">'+esc(p.cliente)+'</span>'
           +(p.cidade?'<div style="font-size:11px;color:var(--tx3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.cidade)+'</div>':'')
           +(()=>{const _d=fmtPrevisao(p.proj.camposFormulario?.dataProjetoAssinado);return _d?'':'<div style="margin-top:4px"><span style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;white-space:nowrap">D/ASS</span></div>';})()
+          +(()=>{const _mp=minPrevisaoProj(p.proj);return _mp?'<div style="margin-top:4px;display:flex;align-items:center;gap:5px"><span style="font-size:10px;color:var(--tx3)">Prazo:</span>'+_chipPrevisao(_mp)+'</div>':''})()
         +'</div>'
         +'<div class="proj-right-block" style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
           +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
