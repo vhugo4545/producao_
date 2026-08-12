@@ -1390,7 +1390,32 @@ function renderP5Ctrl(){
         </div>`:''}
         ${e.firstStartAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px"><span style="color:var(--tx3)">Início</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span></div>`:''}
         ${e.endAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px"><span style="color:var(--tx3)">Conclusão</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span></div>`:''}
-        ${(()=>{const evs=(workers.length===1?workers[0].pauseEvents:null)||e.pauseEvents||[];const compl=evs.filter(ev=>ev.pausedAt&&ev.resumedAt);return compl.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)"><div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Pausas registradas</div>`+compl.map((ev,n)=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);padding:2px 0"><span>Pausa ${n+1}</span><span style="font-family:'Inconsolata',monospace">${fmtTs(ev.pausedAt)} → ${fmtTs(ev.resumedAt)} <span style="color:var(--amber)">(${fmtTime((ev.resumedAt-ev.pausedAt)/1000)})</span></span></div>`).join('')+'</div>':''})()}
+        ${(()=>{
+          // Coleta todos os pauseEvents: por worker (multi) ou direto na etapa (legado)
+          let allEvs=[];
+          if(workers.length>0){
+            workers.forEach(w=>{
+              const u=USUARIOS.find(x=>x.id===w.userId);
+              const nome=u?.nome.split(' ')[0]||w.userId;
+              (w.pauseEvents||[]).forEach(ev=>allEvs.push({...ev,nome}));
+            });
+          }
+          if(!allEvs.length)(e.pauseEvents||[]).forEach(ev=>allEvs.push(ev));
+          if(!allEvs.length)return '';
+          allEvs.sort((a,b)=>(a.pausedAt||0)-(b.pausedAt||0));
+          return`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+            <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Pausas registradas</div>`
+            +allEvs.map((ev,n)=>{
+              const dur=ev.resumedAt?fmtTime((ev.resumedAt-ev.pausedAt)/1000):'em pausa';
+              const cor=ev.resumedAt?'var(--tx3)':'var(--amber)';
+              const seta=ev.resumedAt?` → ${fmtTs(ev.resumedAt)}`:'';
+              const nome=ev.nome?`<span style="color:var(--tx2);font-weight:600">${esc(ev.nome)}</span> · `:'';
+              return`<div style="font-size:11px;color:var(--tx3);padding:3px 0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <span>${nome}${fmtTs(ev.pausedAt)}${seta}</span>
+                <span style="font-family:'Inconsolata',monospace;color:${cor};font-weight:600">${dur}</span>
+              </div>`;
+            }).join('')+'</div>';
+        })()}
         ${workers.length<=1&&elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)"><span style="color:var(--tx)">Total</span><span style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(elapsed)}</span></div>`:''}
       </div>
       ${isGestorUser?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
