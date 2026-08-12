@@ -2430,7 +2430,7 @@ function renderP1(){
         ?'<div style="display:flex;flex-direction:column;gap:0">'+Array(6).fill(_skeletonCard()).join('')+'</div>'
         :`<div class="empty-state">Nenhum pedido em produção</div>`
     );
-    {const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+    {const el=$('p1-search');const af=document.activeElement;if(el&&(!af||af===document.body||af===el)){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
     return;
   }
 
@@ -2690,8 +2690,8 @@ function renderP1(){
       }).join('')+'</div></div>';
   }
   $('p1-body').innerHTML=searchBar+countNote+'<div style="display:flex;flex-direction:column;gap:8px">'+cards.join('')+'</div>'+oaHtml;
-  // Mantém foco e cursor no campo de busca após re-render
-  {const el=$('p1-search');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
+  // Mantém foco e cursor no campo de busca após re-render (só se nenhum outro campo está ativo)
+  {const el=$('p1-search');const af=document.activeElement;if(el&&(!af||af===document.body||af===el)){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
   // Restaura estado dos checkboxes de produto visíveis no DOM
   document.querySelectorAll('.bulk-chk').forEach(c=>{
     if(_selectedKeys.has(c.dataset.key))c.checked=true;
@@ -4758,26 +4758,8 @@ async function init(){
   }catch(_){}
   _populateLoginSelect();
 
-  // Tenta revalidar sessão salva (auto-login)
-  const savedToken=localStorage.getItem('auth_token');
-  const savedUser=localStorage.getItem('auth_user');
-  if(savedToken&&savedUser){
-    try{
-      const r=await fetch(PROD_API+'/api/auth/me',{headers:{'Authorization':'Bearer '+savedToken}});
-      if(r.ok){
-        _authToken=savedToken;
-        const me=(await r.json()).user;
-        _entrarComoUsuario(me);
-      } else {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-      }
-    }catch(_){
-      // Offline — entra com dados salvos
-      _authToken=savedToken;
-      _entrarComoUsuario(JSON.parse(savedUser));
-    }
-  }
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
 
   _carregarHidden();
 
