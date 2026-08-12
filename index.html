@@ -988,14 +988,10 @@ let allData=[],curPage=1,totPages=1;
 // mapa global estável: prodKey → itemNum (calculado uma vez por proposta, igual para todos os usuários)
 const _itemNumMap=new Map();
 function _indexarProds(proj){
-  // Limpa entradas desta proposta para recalcular após soft-delete
-  (proj.grupos||[]).forEach(grupo=>{
-    getProdutosDoGrupo(grupo,proj._id).forEach(prod=>_itemNumMap.delete(prod.key));
-  });
   let idx=0;
   (proj.grupos||[]).forEach(grupo=>{
     getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
-      if(!_hiddenProdutos.has(prod.key))_itemNumMap.set(prod.key,++idx);
+      if(!_itemNumMap.has(prod.key))_itemNumMap.set(prod.key,++idx);
     });
   });
 }
@@ -1071,7 +1067,6 @@ function confirmarRemover(){
   } else {
     const key=_rmPendente.ref;
     _hiddenProdutos.add(key);_saveHiddenLocal();_postHidden('produto',key);
-    allData.forEach(p=>_indexarProds(p));
     toast('Produto removido');renderP1();
   }
   _rmPendente=null;
