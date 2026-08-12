@@ -635,7 +635,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Plus Jak
       <div class="modal-title" style="margin:0">Excluir Pedidos</div>
       <button onclick="_fecharModalExcluirPedidos()" style="background:none;border:none;font-size:20px;color:var(--tx3);cursor:pointer;padding:2px 6px;line-height:1">×</button>
     </div>
-    <div class="modal-sub" style="margin-bottom:16px">Selecione os pedidos que deseja ocultar de todo o sistema de produção. Esta ação só pode ser desfeita via código.</div>
+    <div class="modal-sub" style="margin-bottom:12px">Selecione os pedidos que deseja ocultar de todo o sistema de produção. Esta ação só pode ser desfeita via código.</div>
+    <input id="ep-search" type="text" placeholder="Buscar pedido ou cliente…" oninput="_epFiltrar()" style="width:100%;box-sizing:border-box;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;padding:9px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx);outline:none;margin-bottom:10px;transition:border .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--bd)'">
     <div id="ep-list" class="mi-list" style="flex:1;overflow-y:auto;min-height:60px;max-height:400px"></div>
     <div class="modal-actions" style="margin-top:16px">
       <button class="cbtn cbtn-reopen" onclick="_fecharModalExcluirPedidos()">Cancelar</button>
@@ -1083,8 +1084,16 @@ function _abrirModalExcluirPedidos(){
       </div>
     </label>`;
   }).join('')||'<div style="font-size:12px;color:var(--tx3);padding:8px 0">Nenhum pedido visível</div>';
+  const s=$('ep-search');if(s)s.value='';
   _epUpdateBtn();
   $('ep-overlay').style.display='flex';
+  setTimeout(()=>$('ep-search')?.focus(),50);
+}
+function _epFiltrar(){
+  const q=($('ep-search')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#ep-list label.mi-item').forEach(el=>{
+    el.style.display=(!q||el.textContent.toLowerCase().includes(q))?'':'none';
+  });
 }
 function _fecharModalExcluirPedidos(){$('ep-overlay').style.display='none';}
 function _epUpdateBtn(){
@@ -1096,6 +1105,7 @@ function _epUpdateBtn(){
 async function _confirmarExcluirPedidos(){
   const ids=Array.from(document.querySelectorAll('#ep-list input[type=checkbox]')).filter(c=>c.checked).map(c=>c.dataset.id);
   if(!ids.length)return;
+  if(!confirm(`Tem certeza que deseja ocultar ${ids.length} pedido${ids.length!==1?'s':''}?\n\nEsta ação só pode ser desfeita via código.`))return;
   _fecharModalExcluirPedidos();
   ids.forEach(id=>{_hiddenPedidos.add(id);_postHidden('pedido',id);});
   _saveHiddenLocal();
