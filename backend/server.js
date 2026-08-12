@@ -40,11 +40,17 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => { console.error('[db] Falha na conexão:', err.message); process.exit(1); });
 
 // ── Schemas ─────────────────────────────────────────────────
+const pauseEventSchema = new mongoose.Schema({
+  pausedAt:  { type: Number, default: null },
+  resumedAt: { type: Number, default: null },
+}, { _id: false });
+
 const workerSchema = new mongoose.Schema({
   userId:       { type: String, maxlength: 64 },
   baseElapsed:  { type: Number, default: 0 },
   startAt:      { type: Number, default: null },
   firstStartAt: { type: Number, default: null },
+  pauseEvents:  { type: [pauseEventSchema], default: [] },
 }, { _id: false });
 
 const etapaSchema = new mongoose.Schema({
@@ -56,6 +62,7 @@ const etapaSchema = new mongoose.Schema({
   assignedTo:   { type: String, default: null, maxlength: 64 },
   liberada:     { type: Boolean, default: false },
   workers:      { type: [workerSchema], default: [] },
+  pauseEvents:  { type: [pauseEventSchema], default: [] },
 }, { _id: false });
 
 const obsSchema = new mongoose.Schema({

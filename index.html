@@ -1160,11 +1160,12 @@ function getElapsed(k){const s=pState[k];if(!s)return 0;if(s.state==='running')r
 
 // ── Etapas ──
 function getEtapas(k){
-  if(!pEtapas[k])pEtapas[k]=ETAPAS.map(()=>({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null,workers:[],liberada:false}));
+  const _blank=()=>({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null,workers:[],liberada:false,pauseEvents:[]});
+  if(!pEtapas[k])pEtapas[k]=ETAPAS.map(_blank);
   // Migra dados antigos com 32 etapas (formato anterior com validações intercaladas)
   if(pEtapas[k].length>ETAPAS.length) pEtapas[k]=pEtapas[k].filter((_,i)=>i%2===0);
   // Garante tamanho correto
-  while(pEtapas[k].length<ETAPAS.length) pEtapas[k].push({state:'pending',baseElapsed:0,startAt:null,firstStartAt:null,endAt:null,assignedTo:null,workers:[],liberada:false});
+  while(pEtapas[k].length<ETAPAS.length) pEtapas[k].push(_blank());
   return pEtapas[k];
 }
 function workerElapsed(w){if(!w)return 0;let t=w.baseElapsed||0;if(w.startAt)t+=(Date.now()-w.startAt)/1000;return Math.max(0,t);}
@@ -1389,6 +1390,7 @@ function renderP5Ctrl(){
         </div>`:''}
         ${e.firstStartAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px"><span style="color:var(--tx3)">Início</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.firstStartAt)}</span></div>`:''}
         ${e.endAt?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px"><span style="color:var(--tx3)">Conclusão</span><span style="font-family:'Inconsolata',monospace;color:var(--tx2)">${fmtTs(e.endAt)}</span></div>`:''}
+        ${(()=>{const evs=(workers.length===1?workers[0].pauseEvents:null)||e.pauseEvents||[];const compl=evs.filter(ev=>ev.pausedAt&&ev.resumedAt);return compl.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)"><div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">Pausas registradas</div>`+compl.map((ev,n)=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);padding:2px 0"><span>Pausa ${n+1}</span><span style="font-family:'Inconsolata',monospace">${fmtTs(ev.pausedAt)} → ${fmtTs(ev.resumedAt)} <span style="color:var(--amber)">(${fmtTime((ev.resumedAt-ev.pausedAt)/1000)})</span></span></div>`).join('')+'</div>':''})()}
         ${workers.length<=1&&elapsed>0?`<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;margin-top:4px;padding-top:6px;border-top:1px solid var(--bd)"><span style="color:var(--tx)">Total</span><span style="font-family:'Inconsolata',monospace;color:var(--accent)">${fmtTime(elapsed)}</span></div>`:''}
       </div>
       ${isGestorUser?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
@@ -1440,14 +1442,18 @@ function p5Pausar(){
     if(myW&&myW.startAt!=null){
       myW.baseElapsed=(myW.baseElapsed||0)+(now-myW.startAt)/1000;
       myW.startAt=null;
+      if(!myW.pauseEvents)myW.pauseEvents=[];
+      myW.pauseEvents.push({pausedAt:now,resumedAt:null});
     } else if(!le.workers?.length){
       // legado: sem workers[], pausa a etapa toda
       le.baseElapsed=etapaElapsed(lk,i);
+      if(!le.pauseEvents)le.pauseEvents=[];
+      le.pauseEvents.push({pausedAt:now,resumedAt:null});
     }
     // Se TODOS os workers estão pausados → state='paused'
     const algumAtivo=(le.workers||[]).some(w=>w.startAt!=null);
     if(!algumAtivo){le.state='paused';if(!pState[lk])pState[lk]={state:'idle'};pState[lk].state='paused';}
-    saveProducaoState(lk);
+    saveProducaoState(lk,0);
   });
   const myElap=workerElapsed((e.workers||[]).find(w=>w.userId===currentUser?.id));
   toast('Pausado — '+fmtTime(myElap||etapaElapsed(k,i)));
@@ -1460,11 +1466,21 @@ function p5Retomar(){
   (_linkedKeys.length?_linkedKeys:[k]).forEach(lk=>{
     const le=getEtapas(lk)[i];if(!le||le.state==='done')return;
     const myW=(le.workers||[]).find(w=>w.userId===currentUser?.id);
-    if(myW){myW.startAt=now;}
-    else if(!le.workers?.length){le.startAt=now;} // legado
+    if(myW){
+      myW.startAt=now;
+      // Fecha o último evento de pausa aberto
+      const lastEv=(myW.pauseEvents||[]).findLast?.(ev=>ev.resumedAt==null)
+        ||(myW.pauseEvents||[]).slice().reverse().find(ev=>ev.resumedAt==null);
+      if(lastEv)lastEv.resumedAt=now;
+    } else if(!le.workers?.length){
+      le.startAt=now;
+      const lastEv=(le.pauseEvents||[]).findLast?.(ev=>ev.resumedAt==null)
+        ||(le.pauseEvents||[]).slice().reverse().find(ev=>ev.resumedAt==null);
+      if(lastEv)lastEv.resumedAt=now;
+    }
     le.state='active';
     if(!pState[lk])pState[lk]={state:'idle'};pState[lk].state='running';
-    saveProducaoState(lk);
+    saveProducaoState(lk,0);
   });
   toast('Retomado');renderP5State();renderP5Ctrl();updateDot(k);startP5Loop();
 }
@@ -1481,8 +1497,15 @@ function p5Encerrar(){
   _p5Raf=null;
   (_linkedKeys.length?_linkedKeys:[k]).forEach(lk=>{
     const le=getEtapas(lk)[i];if(!le||le.state==='done')return;
-    // Pausa todos os workers restantes
-    (le.workers||[]).forEach(w=>{if(w.startAt!=null){w.baseElapsed=(w.baseElapsed||0)+(now-w.startAt)/1000;w.startAt=null;}});
+    // Pausa todos os workers restantes e fecha eventos abertos
+    (le.workers||[]).forEach(w=>{
+      if(w.startAt!=null){w.baseElapsed=(w.baseElapsed||0)+(now-w.startAt)/1000;w.startAt=null;}
+      const openEv=(w.pauseEvents||[]).slice().reverse().find(ev=>ev.resumedAt==null);
+      if(openEv)openEv.resumedAt=now;
+    });
+    // Fecha evento de pausa aberto na etapa (legado sem workers[])
+    const openEtapaEv=(le.pauseEvents||[]).slice().reverse().find(ev=>ev.resumedAt==null);
+    if(openEtapaEv)openEtapaEv.resumedAt=now;
     le.state='done';le.endAt=now;
     if(!le.firstStartAt)le.firstStartAt=e.firstStartAt;
     if(le.workers?.length)le.baseElapsed=le.workers.reduce((s,w)=>s+(w.baseElapsed||0),0);
@@ -3668,7 +3691,10 @@ function renderMeuDash(){
           const isAssigned=e.assignedTo===uid||(e.workers||[]).some(w=>w.userId===uid);
           if(!isAssigned)return;
           const myW=(e.workers||[]).find(w=>w.userId===uid);
-          const secs=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
+          // Base salva no Mongo + componente ao vivo se esta etapa estiver ativa agora
+          const savedSecs=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
+          const liveSecs=(e.state==='active'&&myW?.startAt)?((Date.now()-myW.startAt)/1000):0;
+          const secs=savedSecs+liveSecs;
           if(secs<=0&&e.state!=='done')return;
           totalSecs+=secs;countEtapas++;
           // por etapa
@@ -4923,11 +4949,13 @@ function _p5IniciarMulti(keys){
     }
     myW.startAt=now;
     if(!myW.firstStartAt)myW.firstStartAt=now;
+    if(!myW.pauseEvents)myW.pauseEvents=[];
     if(!e.firstStartAt)e.firstStartAt=now;
+    if(!e.pauseEvents)e.pauseEvents=[];
     e.state='active';
     if(!e.assignedTo&&currentUser)e.assignedTo=currentUser.id;
     if(!pState[k])pState[k]={state:'idle'};pState[k].state='running';
-    saveProducaoState(k);
+    saveProducaoState(k,0);
   });
   _linkedKeys=[...new Set(keys)];
   const n=_linkedKeys.length;
