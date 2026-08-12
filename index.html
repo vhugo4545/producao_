@@ -988,10 +988,14 @@ let allData=[],curPage=1,totPages=1;
 // mapa global estável: prodKey → itemNum (calculado uma vez por proposta, igual para todos os usuários)
 const _itemNumMap=new Map();
 function _indexarProds(proj){
+  // Limpa entradas desta proposta para recalcular após soft-delete
+  (proj.grupos||[]).forEach(grupo=>{
+    getProdutosDoGrupo(grupo,proj._id).forEach(prod=>_itemNumMap.delete(prod.key));
+  });
   let idx=0;
   (proj.grupos||[]).forEach(grupo=>{
     getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
-      if(!_itemNumMap.has(prod.key))_itemNumMap.set(prod.key,++idx);
+      if(!_hiddenProdutos.has(prod.key))_itemNumMap.set(prod.key,++idx);
     });
   });
 }
@@ -1067,6 +1071,7 @@ function confirmarRemover(){
   } else {
     const key=_rmPendente.ref;
     _hiddenProdutos.add(key);_saveHiddenLocal();_postHidden('produto',key);
+    allData.forEach(p=>_indexarProds(p));
     toast('Produto removido');renderP1();
   }
   _rmPendente=null;
@@ -1471,6 +1476,7 @@ function p5Retomar(){
 function p5Encerrar(){
   const k=curKey,i=curEtapaIdx;const e=getEtapas(k)[i];
   if(e.state!=='active'&&e.state!=='paused')return;
+  if(!confirm('Tem certeza que deseja encerrar esta etapa?'))return;
   const now=Date.now();
   // Pausa meu worker antes de encerrar
   const myW=(e.workers||[]).find(w=>w.userId===currentUser?.id);
@@ -2775,8 +2781,7 @@ function _dmSaveStep(){
     const gi=i+1;
     if(ep.semDemandar) return;
     const opIds=Array.from(document.querySelectorAll('#dm-ops-'+gi+' .dm-op-sel')).map(s=>s.value).filter(Boolean);
-    const liberada=document.getElementById('dm-lib-'+gi)?.checked||false;
-    data.push({gi,opIds,liberada});
+    data.push({gi,opIds,liberada:true});
   });
   _dmStepData[key]=data;
 }
@@ -3022,7 +3027,6 @@ function _renderModalDemandar(){
     const uids=existingWorkers[gi]?.length?existingWorkers[gi]:[''];
     const firstRow=_dmOpRow(gi,uids[0],false);
     const extraRows=uids.slice(1).map(uid=>_dmOpRow(gi,uid,true)).join('');
-    const libChecked=existingLiberada[gi]?' checked':'';
     const eventoTag=ep.evento?`<span style="font-size:9px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">📋</span>`:'';
     return`<tr style="border-top:1px solid var(--bd)">
       <td style="padding:7px 12px;vertical-align:top">
@@ -3037,12 +3041,6 @@ function _renderModalDemandar(){
         </div>
         <button type="button" onclick="_dmAddOp(${gi})"
           style="margin-top:4px;font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;letter-spacing:.02em">+ add operador</button>
-      </td>
-      <td style="padding:5px 12px;text-align:center;vertical-align:top;padding-top:12px">
-        <label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-size:11px;color:var(--tx2)">
-          <input type="checkbox" id="dm-lib-${gi}"${libChecked} style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
-          Liberar
-        </label>
       </td>
     </tr>`;
   }).join('');
@@ -3084,9 +3082,6 @@ function _renderModalDemandar(){
       <select id="dm-op-all" style="flex:1;min-width:130px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 9px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--tx);outline:none">
         <option value="">— escolher —</option>${opOpts}
       </select>
-      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2);cursor:pointer;white-space:nowrap">
-        <input type="checkbox" id="dm-lib-all" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer"> Liberar todas
-      </label>
       <button onclick="_dmAplicarTodos()" style="font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;padding:6px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap">Aplicar</button>
     </div>
 
@@ -3095,7 +3090,6 @@ function _renderModalDemandar(){
         <thead><tr style="background:var(--bg3)">
           <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Etapa</th>
           <th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Responsáveis</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">Liberar</th>
         </tr></thead>
         <tbody>${etapaRows}</tbody>
       </table>
@@ -3109,12 +3103,9 @@ function _renderModalDemandar(){
 
 function _dmAplicarTodos(){
   const opId=document.getElementById('dm-op-all')?.value;
-  const libAll=document.getElementById('dm-lib-all')?.checked||false;
   ETAPAS_PROD.slice(1).forEach((_,i)=>{
     const gi=i+1;
-    // Atualiza o primeiro select de cada container
     if(opId){const s=document.querySelector('#dm-ops-'+gi+' .dm-op-sel');if(s)s.value=opId;}
-    const c=document.getElementById('dm-lib-'+gi);if(c)c.checked=libAll;
   });
 }
 
@@ -3679,8 +3670,10 @@ function renderMeuDash(){
         const etapas=getEtapas(prod.key);
         etapas.forEach((e,i)=>{
           if(ETAPAS[i].tipo!=='producao')return;
-          if(e.assignedTo!==uid)return;
-          const secs=e.baseElapsed||0;
+          const isAssigned=e.assignedTo===uid||(e.workers||[]).some(w=>w.userId===uid);
+          if(!isAssigned)return;
+          const myW=(e.workers||[]).find(w=>w.userId===uid);
+          const secs=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
           if(secs<=0&&e.state!=='done')return;
           totalSecs+=secs;countEtapas++;
           // por etapa
@@ -3708,7 +3701,7 @@ function renderMeuDash(){
     (proj.grupos||[]).forEach(grupo=>{
       getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
         getEtapas(prod.key).forEach((e,i)=>{
-          if(ETAPAS[i].tipo==='producao'&&e.assignedTo===uid&&e.state==='pending')pendentes++;
+          if(ETAPAS[i].tipo==='producao'&&(e.assignedTo===uid||(e.workers||[]).some(w=>w.userId===uid))&&e.state==='pending')pendentes++;
         });
       });
     });
@@ -4312,10 +4305,10 @@ function _renderAlocacaoConteudo(){
     :'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#ede9fe;color:#5b21b6">demandado</span>';
   if(_alocacaoVista==='operador'){
     const mapaT={};
-    USUARIOS.filter(u=>u.role==='operador').forEach(u=>{mapaT[u.id]=[];});
+    USUARIOS.filter(u=>u.role==='operador'&&!u.semProducao).forEach(u=>{mapaT[u.id]=[];});
     itens.forEach(it=>{if(mapaT[it.userId]!==undefined)mapaT[it.userId].push(it);});
     wrap.innerHTML=banner+'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'
-      +USUARIOS.filter(u=>u.role==='operador').map(u=>{
+      +USUARIOS.filter(u=>u.role==='operador'&&!u.semProducao).map(u=>{
         const tarefas=mapaT[u.id]||[];
         const ini=initials(u.nome);
         const itemsHtml=tarefas.map(t=>`<div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:3px">
@@ -4381,7 +4374,7 @@ function navToQuadro(){
 
 function _getQuadroRows(){
   const todayStart=new Date();todayStart.setHours(0,0,0,0);const ts=todayStart.getTime();
-  return USUARIOS.map(user=>{
+  return USUARIOS.filter(u=>!u.semProducao).map(user=>{
     let activeTask=null;
     let todaySecs=0;
     let pendingCount=0;
@@ -4392,12 +4385,15 @@ function _getQuadroRows(){
           const etapas=getEtapas(prod.key);
           etapas.forEach((e,i)=>{
             if(ETAPAS[i].tipo!=='producao')return;
-            if(e.assignedTo!==user.id)return;
-            // hoje
+            const isAssigned=e.assignedTo===user.id||(e.workers||[]).some(w=>w.userId===user.id);
+            if(!isAssigned)return;
+            // hoje — usa tempo do worker específico se disponível
+            const myW=(e.workers||[]).find(w=>w.userId===user.id);
             if(e.firstStartAt&&e.firstStartAt>=ts){
-              const sec=e.baseElapsed||0;
+              const sec=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
               todaySecs+=sec;
-              if(e.state==='active')todaySecs+=(Date.now()-e.startAt)/1000;
+              if(e.state==='active'&&myW?.startAt)todaySecs+=(Date.now()-myW.startAt)/1000;
+              else if(e.state==='active'&&!myW&&e.startAt)todaySecs+=(Date.now()-e.startAt)/1000;
             }
             // tarefa atual
             if((e.state==='active'||e.state==='paused')&&!activeTask){
@@ -4509,10 +4505,10 @@ function renderQuadro(){
   };
 
   const filaCell=(row)=>{
-    if(row.status==='ocioso'&&isGestor)
-      return`<button class="cbtn cbtn-start" style="font-size:10px;padding:3px 10px" onclick="navTo('p1')">Designar</button>`;
     const n=row.pendingCount;
-    return`<span class="qdl-fila${n>0?' qdl-fila-has':''}">${n}</span>`;
+    const badge=`<span class="qdl-fila${n>0?' qdl-fila-has':''}">${n}</span>`;
+    const btn=isGestor?`<button class="cbtn cbtn-start" style="font-size:10px;padding:3px 10px" onclick="navTo('p1')">Designar</button>`:'';
+    return`<div style="display:flex;gap:4px;align-items:center">${badge}${btn}</div>`;
   };
 
   const tableRows=filtered.map(row=>{
@@ -4654,6 +4650,7 @@ async function _carregarContextoOperador(userId){
   }catch(_){
     _operadorPronto=true;
     renderMinhasTarefas();
+    toast('⚠ Falha ao conectar — usando dados em cache');
   }
 }
 
@@ -4735,6 +4732,7 @@ async function _carregarPropostasTodas(){
     }
   }catch(e){
     $('p1-body').innerHTML=`<div class="empty-state" style="color:var(--red)">Erro ao carregar: ${e.message}</div>`;
+    toast('⚠ Erro ao carregar pedidos — verifique a conexão');
   }
 }
 
