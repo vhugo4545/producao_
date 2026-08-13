@@ -3687,103 +3687,176 @@ async function fetchPagina(pg,limit=100){
 }
 
 // ── Dashboard analítico ──────────────────────────────────────
+let _meuDashInterval=null;
 function navToMeuDash(){
   if(currentUser?.role!=='operador')return;
   curProj=null;curGrupo=null;curProd=null;curKey=null;curEtapaIdx=null;_p5Raf=null;
   setSbActive('sb-meu-dash');
   setBread([{label:'Meu Desempenho',active:true}]);setTitle('Meu Desempenho');
   renderMeuDash();showPage('p6');
+  clearInterval(_meuDashInterval);
+  _meuDashInterval=setInterval(()=>{
+    if(!$('p6').classList.contains('active')){clearInterval(_meuDashInterval);_meuDashInterval=null;return;}
+    _updateMeuDashTimers();
+  },1000);
 }
 
 function renderMeuDash(){
   const uid=currentUser?.id;
-  const noData='<div class="empty-state" style="padding:20px 0;font-size:13px;color:var(--tx3)">Nenhum tempo registrado ainda</div>';
+  const u=currentUser;
+  const now=Date.now();
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);const ts=todayStart.getTime();
+  const weekStart=new Date(todayStart);weekStart.setDate(weekStart.getDate()-((weekStart.getDay()||7)-1));const ws=weekStart.getTime();
+  const noData='<div style="padding:16px 14px;font-size:12px;color:var(--tx3);text-align:center">Nenhum registro ainda</div>';
 
-  // Coleta só os dados deste usuário
-  let totalSecs=0,countEtapas=0;
-  const byEtapa={};  // nome → {times:[],hh:0,count:0}
-  const byPedido={}; // pedNum → {pedNum,cliente,hh:0,itens:Set}
-
+  // Coleta todas as tarefas atribuídas a este operador
+  const tasks=[];
   allData.forEach(proj=>{
     const pedNum=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'';
     if(!pedNum)return;
     const cliente=proj.camposFormulario?.clientes?.[0]?.nome_razao_social||'—';
     (proj.grupos||[]).forEach(grupo=>{
       getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
-        const etapas=getEtapas(prod.key);
-        etapas.forEach((e,i)=>{
+        getEtapas(prod.key).forEach((e,i)=>{
           if(ETAPAS[i].tipo!=='producao')return;
           const isAssigned=e.assignedTo===uid||(e.workers||[]).some(w=>w.userId===uid);
           if(!isAssigned)return;
           const myW=(e.workers||[]).find(w=>w.userId===uid);
-          // Base salva no Mongo + componente ao vivo se esta etapa estiver ativa agora
-          const savedSecs=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
-          const liveSecs=(e.state==='active'&&myW?.startAt)?((Date.now()-myW.startAt)/1000):0;
-          const secs=savedSecs+liveSecs;
-          if(secs<=0&&e.state!=='done')return;
-          totalSecs+=secs;countEtapas++;
-          // por etapa
-          const nome=ETAPAS[i].nome;
-          if(!byEtapa[nome])byEtapa[nome]={times:[],hh:0,count:0};
-          if(secs>0){byEtapa[nome].times.push(secs);byEtapa[nome].hh+=secs;}
-          byEtapa[nome].count++;
-          // por pedido
-          if(!byPedido[pedNum])byPedido[pedNum]={pedNum,cliente,hh:0,itens:new Set()};
-          byPedido[pedNum].hh+=secs;
-          byPedido[pedNum].itens.add(prod.key);
+          const saved=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
+          const live=(e.state==='active'&&myW?.startAt)?((now-myW.startAt)/1000):(e.state==='active'&&!myW&&e.startAt)?((now-e.startAt)/1000):0;
+          const secs=saved+live;
+          tasks.push({pedNum,cliente,prod,etapaNome:ETAPAS[i].nome,etapaIdx:i,e,myW,secs});
         });
       });
     });
   });
+  tasks.sort((a,b)=>(b.e.firstStartAt||0)-(a.e.firstStartAt||0));
 
-  const etapasSorted=Object.entries(byEtapa).filter(([,v])=>v.count>0).sort((a,b)=>b[1].hh-a[1].hh);
-  const pedidosSorted=Object.values(byPedido).filter(p=>p.hh>0).sort((a,b)=>b.hh-a.hh);
+  const activeTask=tasks.find(t=>t.e.state==='active'||t.e.state==='paused');
+  const allSecs=tasks.reduce((s,t)=>s+t.secs,0);
+  const todaySecs=tasks.filter(t=>t.e.firstStartAt>=ts).reduce((s,t)=>s+t.secs,0);
+  const weekSecs=tasks.filter(t=>t.e.firstStartAt>=ws).reduce((s,t)=>s+t.secs,0);
+  const pendCount=tasks.filter(t=>t.e.state==='pending').length;
+
+  // Por etapa e pedido
+  const byEtapa={},byPedido={};
+  tasks.filter(t=>t.secs>0||t.e.state==='done').forEach(t=>{
+    const n=t.etapaNome;
+    if(!byEtapa[n])byEtapa[n]={hh:0,count:0};
+    byEtapa[n].hh+=t.secs;byEtapa[n].count++;
+    if(!byPedido[t.pedNum])byPedido[t.pedNum]={pedNum:t.pedNum,cliente:t.cliente,hh:0,itens:new Set()};
+    byPedido[t.pedNum].hh+=t.secs;byPedido[t.pedNum].itens.add(t.prod.key);
+  });
+  const etapasSorted=Object.entries(byEtapa).sort((a,b)=>b[1].hh-a[1].hh);
+  const pedidosSorted=Object.values(byPedido).sort((a,b)=>b.hh-a.hh);
   const maxEtapa=etapasSorted[0]?.[1]?.hh||1;
   const maxPedido=pedidosSorted[0]?.hh||1;
 
-  // Tarefas pendentes (atribuídas mas não iniciadas)
-  let pendentes=0;
-  allData.forEach(proj=>{
-    (proj.grupos||[]).forEach(grupo=>{
-      getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
-        getEtapas(prod.key).forEach((e,i)=>{
-          if(ETAPAS[i].tipo==='producao'&&(e.assignedTo===uid||(e.workers||[]).some(w=>w.userId===uid))&&e.state==='pending')pendentes++;
-        });
-      });
-    });
-  });
-
-  const u=currentUser;
   let html=`
-  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;padding:18px 20px;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--shadow)">
-    <div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">${initials(u.nome)}</div>
-    <div><div style="font-size:16px;font-weight:700;color:var(--tx)">${esc(u.nome)}</div><div style="font-size:12px;color:var(--tx3);margin-top:2px">${esc(u.cargo)}</div></div>
+  <!-- Header -->
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:16px 18px;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--shadow)">
+    <div style="width:46px;height:46px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0">${initials(u.nome)}</div>
+    <div style="flex:1"><div style="font-size:15px;font-weight:700;color:var(--tx)">${esc(u.nome)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${esc(u.cargo)}</div></div>
+    ${activeTask?`<div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;background:#dcfce7;border:1px solid #86efac"><span class="qdl-live-dot" style="background:#16a34a"></span><span style="font-size:11px;font-weight:700;color:#16a34a">Em tarefa</span></div>`:''}
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
     ${[
-      {label:'HH efetivo total',val:fmtTime(totalSecs),color:'var(--accent)'},
-      {label:'Etapas concluídas',val:countEtapas,color:'#7c3aed'},
-      {label:'Aguardando início',val:pendentes,color:pendentes>0?'#d97706':'var(--tx3)'},
-    ].map(c=>`<div class="stat-card" style="padding:14px 16px">
-      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${c.label}</div>
-      <div style="font-size:28px;font-weight:800;color:${c.color}">${c.val}</div>
+      {label:'Hoje',val:fmtTime(todaySecs),id:'mdash-hoje',color:'var(--accent)'},
+      {label:'Esta semana',val:fmtTime(weekSecs),id:'mdash-sem',color:'#7c3aed'},
+      {label:'Total geral',val:fmtTime(allSecs),id:'mdash-total',color:'var(--tx2)'},
+      {label:'Pendentes',val:pendCount,id:null,color:pendCount>0?'#d97706':'var(--tx3)'},
+    ].map(c=>`<div class="stat-card" style="padding:12px 14px">
+      <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${c.label}</div>
+      <div ${c.id?`id="${c.id}"`:''}style="font-size:20px;font-weight:800;color:${c.color};font-family:'Inconsolata',monospace">${c.val}</div>
     </div>`).join('')}
   </div>`;
 
+  // Tarefa ativa
+  if(activeTask){
+    const e=activeTask.e;const myW=activeTask.myW;
+    const pauseEvs=(myW?.pauseEvents||e.pauseEvents||[]).filter(ev=>ev.pausedAt);
+    const statusTxt=e.state==='active'?'Trabalhando':'Pausado';
+    const statusCor=e.state==='active'?'var(--accent)':'var(--amber)';
+    html+=`<div class="info-card" style="margin-bottom:16px;border-left:3px solid ${statusCor}">
+      <div class="ic-head" style="font-size:12px;display:flex;align-items:center;justify-content:space-between">
+        <span>Tarefa ativa agora</span>
+        <span style="font-size:10px;font-weight:700;color:${statusCor}">${statusTxt}</span>
+      </div>
+      <div class="ic-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--tx)">${esc(activeTask.etapaNome)}</div>
+            <div style="font-size:11px;color:var(--tx2);margin-top:2px">${esc(activeTask.pedNum)} · ${esc(activeTask.prod.nome)}</div>
+            ${e.firstStartAt?`<div style="font-size:10px;color:var(--tx3);margin-top:3px">Iniciada ${fmtTs(e.firstStartAt)}</div>`:''}
+          </div>
+          <div id="mdash-live-timer" style="font-family:'Inconsolata',monospace;font-size:26px;font-weight:700;color:${statusCor};flex-shrink:0">${fmtTime(activeTask.secs)}</div>
+        </div>
+        ${pauseEvs.length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">
+          <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Pausas desta tarefa</div>
+          ${pauseEvs.map((ev,n)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--tx3)">
+            <span>Pausa ${n+1}: ${fmtTs(ev.pausedAt)}${ev.resumedAt?' → '+fmtTs(ev.resumedAt):' — em pausa'}</span>
+            <span style="font-family:'Inconsolata',monospace;color:${ev.resumedAt?'var(--tx2)':'var(--amber)'};font-weight:600">${ev.resumedAt?fmtTime((ev.resumedAt-ev.pausedAt)/1000):'⏸'}</span>
+          </div>`).join('')}
+        </div>`:''}
+      </div>
+    </div>`;
+  }
+
+  // Histórico completo
+  // mostra toda tarefa que tem tempo, foi concluída, ou está ativa/pausada — nunca ignora done
+  const histTasks=tasks.filter(t=>t.e.state==='done'||t.e.state==='active'||t.e.state==='paused'||t.secs>0||!!t.e.firstStartAt);
+  if(histTasks.length){
+    html+=`<div class="info-card" style="margin-bottom:16px">
+      <div class="ic-head" style="font-size:12px">Histórico de tarefas (${histTasks.length})</div>
+      <div class="ic-body" style="padding:0;max-height:420px;overflow-y:auto">
+        ${histTasks.map((t,idx)=>{
+          const e=t.e;const myW=t.myW;
+          const ico=e.state==='done'?'✓':e.state==='active'?'▶':'⏸';
+          const cor=e.state==='done'?'var(--green)':e.state==='active'?'var(--accent)':'var(--amber)';
+          const pauseEvs=(myW?.pauseEvents||e.pauseEvents||[]).filter(ev=>ev.pausedAt);
+          const isHoje=e.firstStartAt&&e.firstStartAt>=ts;
+          const badges=e.state==='done'
+            ?`<span style="font-size:8px;padding:1px 5px;border-radius:8px;background:#dcfce7;color:#16a34a;font-weight:700;margin-left:4px">FINALIZADO</span>${isHoje?`<span style="font-size:8px;padding:1px 5px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-weight:700;margin-left:3px">HOJE</span>`:''}`
+            :isHoje?`<span style="font-size:8px;padding:1px 5px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-weight:700;margin-left:4px">HOJE</span>`:'';
+          return`<div style="padding:10px 14px;border-top:${idx?'1px solid var(--bd)':'none'}">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+              <div style="display:flex;gap:8px;min-width:0;align-items:flex-start">
+                <span style="color:${cor};font-weight:700;font-size:13px;flex-shrink:0;margin-top:1px">${ico}</span>
+                <div style="min-width:0">
+                  <div style="font-size:12px;font-weight:700;color:var(--tx)">${esc(t.etapaNome)}${badges}</div>
+                  <div style="font-size:11px;color:var(--tx3)">${esc(t.pedNum)} · ${esc(t.prod.nome)}</div>
+                  ${e.firstStartAt?`<div style="font-size:10px;color:var(--tx3);margin-top:1px">${fmtTs(e.firstStartAt)}${e.endAt?' → '+fmtTs(e.endAt):''}</div>`:''}
+                </div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-family:'Inconsolata',monospace;font-size:13px;font-weight:700;color:${cor}">${fmtTime(t.secs)}</div>
+                ${pauseEvs.length?`<div style="font-size:10px;color:var(--amber);margin-top:1px">${pauseEvs.length} pausa${pauseEvs.length!==1?'s':''}</div>`:''}
+              </div>
+            </div>
+            ${pauseEvs.length?`<div style="margin-top:5px;padding-left:21px">
+              ${pauseEvs.map((ev,n)=>`<div style="font-size:10px;color:var(--tx3);padding:1px 0">Pausa ${n+1}: ${fmtTs(ev.pausedAt)}${ev.resumedAt?' → '+fmtTs(ev.resumedAt)+' ('+fmtTime((ev.resumedAt-ev.pausedAt)/1000)+')':' — em pausa'}</div>`).join('')}
+            </div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
   // Por etapa
-  html+=`<div class="info-card" style="margin-bottom:18px">
-    <div class="ic-head" style="font-size:13px">⏱ Minhas horas por etapa</div>
+  html+=`<div class="info-card" style="margin-bottom:16px">
+    <div class="ic-head" style="font-size:12px">Horas por tipo de etapa</div>
     <div class="ic-body" style="padding:0">
       ${etapasSorted.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--bg3)">
-          <th style="padding:8px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Etapa</th>
-          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">HH total</th>
-          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Vezes</th>
-          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Média</th>
-          <th style="padding:8px 14px;width:100px"></th>
+          <th style="padding:8px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">Etapa</th>
+          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">HH total</th>
+          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">Vezes</th>
+          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">Média</th>
+          <th style="padding:8px 14px;width:80px"></th>
         </tr></thead>
         <tbody>${etapasSorted.map(([nome,v],idx)=>{
-          const avg=v.count>0?v.hh/v.count:0;
+          const avg=v.count?v.hh/v.count:0;
           const pct=Math.round(v.hh/maxEtapa*100);
           return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
             <td style="padding:8px 14px;font-weight:600;color:var(--tx)">${esc(nome)}</td>
@@ -3799,21 +3872,21 @@ function renderMeuDash(){
 
   // Por pedido
   html+=`<div class="info-card" style="margin-bottom:18px">
-    <div class="ic-head" style="font-size:13px">📋 Minha contribuição por pedido</div>
+    <div class="ic-head" style="font-size:12px">Contribuição por pedido</div>
     <div class="ic-body" style="padding:0">
       ${pedidosSorted.length?`<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--bg3)">
-          <th style="padding:8px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Pedido</th>
-          <th style="padding:8px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Cliente</th>
-          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Itens</th>
-          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">HH meu</th>
-          <th style="padding:8px 14px;width:100px"></th>
+          <th style="padding:8px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">Pedido</th>
+          <th style="padding:8px 14px;text-align:left;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">Cliente</th>
+          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">Itens</th>
+          <th style="padding:8px 14px;text-align:right;font-weight:700;color:var(--tx3);font-size:9px;text-transform:uppercase;letter-spacing:.06em">HH meu</th>
+          <th style="padding:8px 14px;width:80px"></th>
         </tr></thead>
         <tbody>${pedidosSorted.map((p,idx)=>{
           const pct=Math.round(p.hh/maxPedido*100);
           return`<tr style="border-top:1px solid var(--bd)${idx%2?' background:var(--bg3)':''}">
             <td style="padding:8px 14px;font-family:'Inconsolata',monospace;font-weight:700;color:var(--accent)">${esc(p.pedNum)}</td>
-            <td style="padding:8px 14px;color:var(--tx);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.cliente)}</td>
+            <td style="padding:8px 14px;color:var(--tx);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.cliente)}</td>
             <td style="padding:8px 14px;text-align:right;color:var(--tx2)">${p.itens.size}</td>
             <td style="padding:8px 14px;text-align:right;font-family:'Inconsolata',monospace;font-weight:700;color:#7c3aed">${fmtTime(p.hh)}</td>
             <td style="padding:8px 14px"><div style="height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#7c3aed;border-radius:2px"></div></div></td>
@@ -3823,7 +3896,45 @@ function renderMeuDash(){
     </div>
   </div>`;
 
+  if(!tasks.length)html+='<div class="empty-state" style="padding:20px 0;font-size:13px;color:var(--tx3)">Nenhum tempo registrado ainda</div>';
   $('p6-body').innerHTML=html;
+}
+
+function _updateMeuDashTimers(){
+  // Atualiza só os elementos de tempo sem re-renderizar tudo
+  const uid=currentUser?.id;
+  const now=Date.now();
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);const ts=todayStart.getTime();
+  const weekStart=new Date(todayStart);weekStart.setDate(weekStart.getDate()-((weekStart.getDay()||7)-1));const ws=weekStart.getTime();
+  let allSecs=0,todaySecs=0,weekSecs=0,activeEt=null;
+  allData.forEach(proj=>{
+    (proj.grupos||[]).forEach(grupo=>{
+      getProdutosDoGrupo(grupo,proj._id).forEach(prod=>{
+        getEtapas(prod.key).forEach((e,i)=>{
+          if(ETAPAS[i].tipo!=='producao')return;
+          const isAssigned=e.assignedTo===uid||(e.workers||[]).some(w=>w.userId===uid);
+          if(!isAssigned)return;
+          const myW=(e.workers||[]).find(w=>w.userId===uid);
+          const saved=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
+          const live=(e.state==='active'&&myW?.startAt)?((now-myW.startAt)/1000):(e.state==='active'&&!myW&&e.startAt)?((now-e.startAt)/1000):0;
+          const secs=saved+live;
+          allSecs+=secs;
+          if(e.firstStartAt>=ts)todaySecs+=secs;
+          if(e.firstStartAt>=ws)weekSecs+=secs;
+          if((e.state==='active'||e.state==='paused')&&!activeEt)activeEt={e,myW,secs,k:prod.key,i};
+        });
+      });
+    });
+  });
+  const hj=$('mdash-hoje');if(hj)hj.textContent=fmtTime(todaySecs);
+  const sem=$('mdash-sem');if(sem)sem.textContent=fmtTime(weekSecs);
+  const tot=$('mdash-total');if(tot)tot.textContent=fmtTime(allSecs);
+  const lt=$('mdash-live-timer');
+  if(lt&&activeEt){
+    const saved=activeEt.myW?(activeEt.myW.baseElapsed||0):(activeEt.e.baseElapsed||0);
+    const live=(activeEt.e.state==='active'&&activeEt.myW?.startAt)?((now-activeEt.myW.startAt)/1000):(activeEt.e.state==='active'&&!activeEt.myW&&activeEt.e.startAt)?((now-activeEt.e.startAt)/1000):0;
+    lt.textContent=fmtTime(saved+live);
+  }
 }
 
 function navToDash(){
@@ -4419,40 +4530,42 @@ function navToQuadro(){
 }
 
 function _getQuadroRows(){
+  const now=Date.now();
   const todayStart=new Date();todayStart.setHours(0,0,0,0);const ts=todayStart.getTime();
   return USUARIOS.filter(u=>!u.semProducao).map(user=>{
-    let activeTask=null;
-    let todaySecs=0;
-    let pendingCount=0;
+    let activeTask=null,todaySecs=0,pendingCount=0;
+    const todayTasks=[];
     allData.forEach(proj=>{
+      const pedNum=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'#'+proj.numeroProposta;
+      const cliente=proj.camposFormulario?.clientes?.[0]?.nome_razao_social||'';
       (proj.grupos||[]).forEach(grupo=>{
-        const prods=getProdutosDoGrupo(grupo,proj._id);
-        prods.forEach((prod,pi)=>{
-          const etapas=getEtapas(prod.key);
-          etapas.forEach((e,i)=>{
+        getProdutosDoGrupo(grupo,proj._id).forEach((prod,pi)=>{
+          getEtapas(prod.key).forEach((e,i)=>{
             if(ETAPAS[i].tipo!=='producao')return;
             const isAssigned=e.assignedTo===user.id||(e.workers||[]).some(w=>w.userId===user.id);
             if(!isAssigned)return;
-            // hoje — usa tempo do worker específico se disponível
             const myW=(e.workers||[]).find(w=>w.userId===user.id);
-            if(e.firstStartAt&&e.firstStartAt>=ts){
-              const sec=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
-              todaySecs+=sec;
-              if(e.state==='active'&&myW?.startAt)todaySecs+=(Date.now()-myW.startAt)/1000;
-              else if(e.state==='active'&&!myW&&e.startAt)todaySecs+=(Date.now()-e.startAt)/1000;
+            const saved=myW?(myW.baseElapsed||0):(e.baseElapsed||0);
+            const live=(e.state==='active'&&myW?.startAt)?((now-myW.startAt)/1000):(e.state==='active'&&e.startAt&&!myW)?((now-e.startAt)/1000):0;
+            const secs=saved+live;
+            // inclui toda tarefa que foi trabalhada (done de qualquer dia, active, paused, firstStartAt)
+            const hasWorked=e.state==='done'||e.state==='active'||e.state==='paused'||(e.firstStartAt!=null);
+            if(hasWorked){
+              const isToday=(e.firstStartAt&&e.firstStartAt>=ts)||(e.state==='active'||e.state==='paused')||(e.endAt&&e.endAt>=ts);
+              if(isToday)todaySecs+=secs;
+              todayTasks.push({pedNum,cliente,prod,etapaIdx:i,etapa:e,etapaCfg:ETAPAS[i],myW,secs,isToday:!!isToday});
             }
-            // tarefa atual
             if((e.state==='active'||e.state==='paused')&&!activeTask){
-              const pedNum=proj.numeroPedido?.trim()||proj.camposFormulario?.numeroPedido?.trim()||'#'+proj.numeroProposta;
-              activeTask={proj,grupo,prod,prodIdx:pi+1,etapaIdx:i,etapa:e,etapaCfg:ETAPAS[i],pedNum};
+              activeTask={pedNum,cliente,prod,prodIdx:pi+1,etapaIdx:i,etapa:e,etapaCfg:ETAPAS[i],myW};
             }
-            // fila: atribuído mas ainda não iniciado
             if(e.state==='pending')pendingCount++;
           });
         });
       });
     });
-    // status
+    // inclui done de qualquer dia, não só hoje — marca isToday para badge
+    todayTasks.sort((a,b)=>(b.etapa.firstStartAt||0)-(a.etapa.firstStartAt||0));
+    const doneTodayCount=todayTasks.filter(t=>t.etapa.state==='done'&&t.isToday).length;
     let status='ocioso';
     if(activeTask){
       const sn=(activeTask.etapaCfg.nome||'').toLowerCase();
@@ -4460,7 +4573,7 @@ function _getQuadroRows(){
       if(activeTask.etapa.state==='active')status=isInstall?'em_obra':'trabalhando';
       else if(activeTask.etapa.state==='paused')status='pausado';
     }
-    return{user,activeTask,todaySecs,pendingCount,status};
+    return{user,activeTask,todaySecs,todayTasks,pendingCount,doneTodayCount,status};
   });
 }
 
@@ -4468,188 +4581,136 @@ function renderQuadro(){
   const rows=_getQuadroRows();
   const now=new Date();
   const hhmm=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const dateFmt=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const dateFmt=now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+  const isGestor=currentUser?.role==='gestor';
 
   const cnt={trabalhando:0,pausado:0,em_obra:0,ocioso:0};
   rows.forEach(r=>cnt[r.status]++);
 
-  // Filtros
-  const etapas=[...new Set(rows.filter(r=>r.activeTask).map(r=>r.activeTask.etapaCfg.nome))].sort();
-  const produtos=[...new Set(rows.filter(r=>r.activeTask).map(r=>r.activeTask.prod.nome))].sort();
-
-  // limites de período
-  const _todayMs=new Date();_todayMs.setHours(0,0,0,0);
-  const _ontemMs=new Date(_todayMs);_ontemMs.setDate(_ontemMs.getDate()-1);
-  const _semanaMs=new Date(_todayMs);_semanaMs.setDate(_semanaMs.getDate()-_semanaMs.getDay()||7);
-  const _periodoOk=(r)=>{
-    if(!_qdlFiltPeriodo)return true;
-    const t=r.activeTask?.etapa?.firstStartAt;
-    if(!t)return false;
-    if(_qdlFiltPeriodo==='hoje')return t>=_todayMs.getTime();
-    if(_qdlFiltPeriodo==='ontem')return t>=_ontemMs.getTime()&&t<_todayMs.getTime();
-    if(_qdlFiltPeriodo==='semana')return t>=_semanaMs.getTime();
-    return true;
-  };
-
-  const isGestor=currentUser?.role==='gestor';
-
-  const selP=`<select class="qdl-sel" id="qdl-f-periodo" onchange="_qdlFiltPeriodo=this.value;renderQuadro()">
-    <option value="">Período</option>
-    <option value="hoje"${_qdlFiltPeriodo==='hoje'?' selected':''}>Hoje</option>
-    <option value="ontem"${_qdlFiltPeriodo==='ontem'?' selected':''}>Ontem</option>
-    <option value="semana"${_qdlFiltPeriodo==='semana'?' selected':''}>Esta semana</option>
-  </select>`;
   const selF=isGestor?`<select class="qdl-sel" id="qdl-f-func" onchange="_qdlFiltFunc=this.value;renderQuadro()">
-    <option value="">Funcionário</option>
-    ${USUARIOS.filter(u=>u.role==='operador').map(u=>`<option value="${u.id}"${_qdlFiltFunc===u.id?' selected':''}>${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+    <option value="">Todos os funcionários</option>
+    ${USUARIOS.filter(u=>u.role==='operador'&&!u.semProducao).map(u=>`<option value="${u.id}"${_qdlFiltFunc===u.id?' selected':''}>${u.nome.split(' ').slice(0,2).join(' ')}</option>`).join('')}
   </select>`:'';
-  const selE=`<select class="qdl-sel" id="qdl-f-etapa" onchange="_qdlFiltEtapa=this.value;renderQuadro()">
-    <option value="">Etapa</option>
-    ${etapas.map(e=>`<option value="${e}"${_qdlFiltEtapa===e?' selected':''}>${e}</option>`).join('')}
-  </select>`;
-  const selPr=`<select class="qdl-sel" id="qdl-f-prod" onchange="_qdlFiltProd=this.value;renderQuadro()">
-    <option value="">Produto</option>
-    ${produtos.map(p=>`<option value="${p}"${_qdlFiltProd===p?' selected':''} title="${esc(p)}">${p.length>22?p.slice(0,22)+'…':p}</option>`).join('')}
-  </select>`;
 
   const filtered=rows.filter(r=>{
     if(!isGestor&&r.user.id!==currentUser?.id)return false;
     if(isGestor&&_qdlFiltFunc&&r.user.id!==_qdlFiltFunc)return false;
-    if(_qdlFiltEtapa&&(!r.activeTask||r.activeTask.etapaCfg.nome!==_qdlFiltEtapa))return false;
-    if(_qdlFiltProd&&(!r.activeTask||r.activeTask.prod.nome!==_qdlFiltProd))return false;
-    if(!_periodoOk(r))return false;
     return true;
   });
-
-  // Sort: trabalhando → em_obra → pausado → ocioso
   const ORDER={trabalhando:0,em_obra:1,pausado:2,ocioso:3};
   filtered.sort((a,b)=>ORDER[a.status]-ORDER[b.status]);
 
-  const statusBadge=s=>{
-    if(s==='trabalhando')return`<span class="qdl-badge qdl-badge-trab"><span class="qdl-dot" style="background:var(--accent)"></span>Trabalhando</span>`;
-    if(s==='pausado')return`<span class="qdl-badge qdl-badge-paus"><span class="qdl-dot" style="background:var(--amber)"></span>Pausado</span>`;
-    if(s==='em_obra')return`<span class="qdl-badge qdl-badge-obra"><span class="qdl-dot" style="background:var(--blue)"></span>Em Obra</span>`;
-    return`<span class="qdl-badge qdl-badge-ocio"><span class="qdl-dot" style="background:var(--red)"></span>Ocioso</span>`;
-  };
+  const STATUS_COR={trabalhando:'var(--accent)',pausado:'var(--amber)',em_obra:'var(--blue)',ocioso:'var(--red)'};
+  const STATUS_LABEL={trabalhando:'Trabalhando',pausado:'Pausado',em_obra:'Em Obra',ocioso:'Ocioso'};
 
-  const timerCell=(row)=>{
-    if(!row.activeTask)return'<span style="color:var(--tx3)">—</span>';
-    const e=row.activeTask.etapa;
-    const i=row.activeTask.etapaIdx;
-    const k=row.activeTask.prod.key;
-    const secs=etapaElapsed(k,i);
-    const cls=row.status==='trabalhando'?'qdl-timer-run':row.status==='em_obra'?'qdl-timer-obra':'qdl-timer-paus';
-    const id='qdl-t-'+row.user.id;
-    return`<span class="qdl-timer ${cls}" id="${id}" data-key="${esc(k)}" data-idx="${i}">${fmtTime(secs)}</span>`;
-  };
+  const _fmtHoje=secs=>{const h=Math.floor(secs/3600);const m=Math.floor((secs%3600)/60);return(h>0?h+'h ':'')+m+'min';};
 
-  const hojeCell=(row)=>{
-    if(!row.todaySecs&&row.status==='ocioso')return`<span style="color:var(--tx3)">0h</span>`;
-    const h=Math.floor(row.todaySecs/3600);
-    const m=Math.floor((row.todaySecs%3600)/60);
-    return`<span id="qdl-hj-${row.user.id}" style="font-family:'Inconsolata',monospace;font-size:11px;color:var(--tx2)">${h>0?h+'h ':''} ${m}min</span>`;
-  };
-
-  const filaCell=(row)=>{
-    const n=row.pendingCount;
-    const badge=`<span class="qdl-fila${n>0?' qdl-fila-has':''}">${n}</span>`;
-    const btn=isGestor?`<button class="cbtn cbtn-start" style="font-size:10px;padding:3px 10px" onclick="navTo('p1')">Designar</button>`:'';
-    return`<div style="display:flex;gap:4px;align-items:center">${badge}${btn}</div>`;
-  };
-
-  const tableRows=filtered.map(row=>{
+  const cards=filtered.map(row=>{
+    const cor=STATUS_COR[row.status];
     const at=row.activeTask;
     const nomeCurto=row.user.apelido||row.user.nome.split(' ')[0];
-    const ocioso=row.status==='ocioso';
-    return`<tr class="${ocioso?'qdl-row-ocioso':''}">
-      <td><div style="display:flex;align-items:center;gap:8px">
-        ${ocioso?`<span class="qdl-warn">⚠</span>`:''}
-        <div style="width:28px;height:28px;border-radius:50%;background:${row.user.role==='gestor'?'var(--accent)':'var(--green-700)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">${initials(row.user.nome)}</div>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--tx)">${nomeCurto}</div>
-          <div style="font-size:10px;color:var(--tx3)">${row.user.cargo.split(' ').slice(0,2).join(' ')}</div>
+    const pauseEvs=at?(at.myW?.pauseEvents||at.etapa.pauseEvents||[]).filter(ev=>ev.pausedAt):[];
+    const pauseHtml=pauseEvs.length?`<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--bd)">
+      <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Pausas</div>
+      ${pauseEvs.map((ev,n)=>{
+        const dur=ev.resumedAt?` (${fmtTime((ev.resumedAt-ev.pausedAt)/1000)})`:'';
+        return`<div style="font-size:10px;color:${ev.resumedAt?'var(--tx3)':'var(--amber)'};padding:1px 0">Pausa ${n+1}: ${fmtTs(ev.pausedAt)}${ev.resumedAt?' → '+fmtTs(ev.resumedAt):'  — em pausa'}${dur}</div>`;
+      }).join('')}
+    </div>`:'' ;
+
+    const histHtml=row.todayTasks.length?`<div style="border-top:1px solid var(--bd);padding:10px 14px 12px">
+      <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Tarefas atribuídas</div>
+      ${row.todayTasks.map(t=>{
+        const ico=t.etapa.state==='done'?'✓':t.etapa.state==='active'?'▶':'⏸';
+        const cor2=t.etapa.state==='done'?'var(--green)':t.etapa.state==='active'?'var(--accent)':'var(--amber)';
+        const ini=t.etapa.firstStartAt?fmtTs(t.etapa.firstStartAt):'?';
+        const fim=t.etapa.endAt?fmtTs(t.etapa.endAt):'agora';
+        const todayBadge=t.isToday&&t.etapa.state!=='active'?`<span style="font-size:8px;padding:1px 4px;border-radius:6px;background:var(--accent-light);color:var(--accent);font-weight:700;flex-shrink:0">HOJE</span>`:'';
+        const doneBadge=t.etapa.state==='done'?`<span style="font-size:8px;padding:1px 4px;border-radius:6px;background:#dcfce7;color:#16a34a;font-weight:700;flex-shrink:0">FINALIZADO</span>`:'';
+        return`<div style="display:flex;align-items:center;gap:5px;padding:3px 0;font-size:11px">
+          <span style="color:${cor2};font-weight:700;width:10px;flex-shrink:0">${ico}</span>
+          <span style="flex:1;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.etapaCfg.nome)}</span>
+          ${doneBadge||todayBadge}
+          <span style="font-family:'Inconsolata',monospace;color:var(--tx3);font-size:9px;white-space:nowrap">${ini}→${fim}</span>
+          <span style="font-family:'Inconsolata',monospace;color:var(--tx);font-weight:600;min-width:34px;text-align:right;font-size:10px">${fmtTime(t.secs)}</span>
+        </div>`;
+      }).join('')}
+    </div>`:'';
+
+    return`<div style="background:var(--bg2);border:1px solid var(--bd);border-top:3px solid ${cor};border-radius:12px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column">
+      <div style="padding:11px 14px;display:flex;align-items:center;gap:9px">
+        <div style="width:32px;height:32px;border-radius:50%;background:${cor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${initials(row.user.nome)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nomeCurto)}</div>
+          <div style="font-size:10px;color:var(--tx3)">${esc(row.user.cargo.split(' ').slice(0,3).join(' '))}</div>
         </div>
-      </div></td>
-      <td>${statusBadge(row.status)}</td>
-      <td>${at?`<span class="qdl-pedido">${esc(at.pedNum)}</span>`:'<span style="color:var(--tx3)">—</span>'}</td>
-      <td style="color:var(--tx2)">${at?at.prodIdx:'<span style="color:var(--tx3)">—</span>'}</td>
-      <td style="font-weight:600;color:var(--tx);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${at?esc(at.etapaCfg.nome):'<span style="color:var(--tx3)">—</span>'}</td>
-      <td style="color:var(--tx2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${at?esc(at.prod.nome):'<span style="color:var(--tx3)">—</span>'}</td>
-      <td>${timerCell(row)}</td>
-      <td>${hojeCell(row)}</td>
-      <td>${filaCell(row)}</td>
-    </tr>`;
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${cor}22;color:${cor};border:1px solid ${cor}44;white-space:nowrap">${STATUS_LABEL[row.status]}</span>
+      </div>
+      <div style="padding:9px 14px;background:var(--bg3);border-top:1px solid var(--bd)">
+        ${at?`<div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Agora</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="min-width:0">
+              <div style="font-size:11px;font-weight:700;color:var(--accent);font-family:'Inconsolata',monospace">${esc(at.pedNum)}</div>
+              <div style="font-size:11px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(at.prod.nome)}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--tx);margin-top:1px">${esc(at.etapaCfg.nome)}</div>
+            </div>
+            <div class="qdl-timer ${row.status==='trabalhando'?'qdl-timer-run':row.status==='em_obra'?'qdl-timer-obra':'qdl-timer-paus'}" id="qdl-t-${row.user.id}" data-key="${esc(at.prod.key)}" data-idx="${at.etapaIdx}" style="font-size:17px;flex-shrink:0">${fmtTime(etapaElapsed(at.prod.key,at.etapaIdx))}</div>
+          </div>
+          ${pauseHtml}`:`<div style="font-size:12px;color:var(--tx3);text-align:center;padding:4px 0">Sem tarefa ativa</div>`}
+      </div>
+      <div style="padding:9px 14px;display:flex;gap:0;border-top:1px solid var(--bd)">
+        <div style="flex:1;text-align:center;padding:0 4px;border-right:1px solid var(--bd)">
+          <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">Hoje</div>
+          <div style="font-family:'Inconsolata',monospace;font-size:13px;font-weight:700;color:var(--tx)" id="qdl-hj-${row.user.id}">${_fmtHoje(row.todaySecs)}</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:0 4px;border-right:1px solid var(--bd)">
+          <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">Concluídas</div>
+          <div style="font-size:13px;font-weight:700;color:var(--green)">${row.doneTodayCount}</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:0 4px">
+          <div style="font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">Fila</div>
+          <div style="font-size:13px;font-weight:700;color:${row.pendingCount>0?'var(--amber)':'var(--tx3)'}">${row.pendingCount}</div>
+        </div>
+      </div>
+      ${histHtml}
+    </div>`;
   }).join('');
 
-  let html=_bannerCarregando()+`
-  <div class="qdl-counters">
-    <div class="qdl-counter">
-      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--accent)"></span> Trabalhando</div>
-      <div class="qdl-counter-val" style="color:var(--accent)">${cnt.trabalhando}</div>
+  const html=_bannerCarregando()+`
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      ${Object.entries(STATUS_COR).map(([s,c])=>`<div style="display:flex;align-items:center;gap:5px">
+        <div style="width:22px;height:22px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">${cnt[s]}</div>
+        <span style="font-size:11px;color:var(--tx2)">${STATUS_LABEL[s]}</span>
+      </div>`).join('')}
     </div>
-    <div class="qdl-counter">
-      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--amber)"></span> Pausados</div>
-      <div class="qdl-counter-val" style="color:var(--amber)">${cnt.pausado}</div>
-    </div>
-    <div class="qdl-counter">
-      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--blue)"></span> Em Obra</div>
-      <div class="qdl-counter-val" style="color:var(--blue)">${cnt.em_obra}</div>
-    </div>
-    <div class="qdl-counter">
-      <div class="qdl-counter-lbl"><span class="qdl-dot" style="background:var(--red)"></span> Ociosos</div>
-      <div class="qdl-counter-val" style="color:var(--red)">${cnt.ocioso}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      ${selF}
+      <button class="qdl-refresh-btn" onclick="renderQuadro()">↻</button>
+      <div class="qdl-live"><span class="qdl-live-dot"></span> Ao vivo</div>
+      <span style="font-size:11px;color:var(--tx3)">${dateFmt} ${hhmm}</span>
     </div>
   </div>
-  <div class="qdl-table-wrap">
-    <div class="qdl-filters">
-      ${selP}${selF}${selE}${selPr}
-      <button class="qdl-refresh-btn" onclick="renderQuadro()">↻ Atualizar</button>
-      <span style="font-size:11px;color:var(--tx3);margin-left:4px">${dateFmt} · ${hhmm}</span>
-    </div>
-    <div class="qdl-table-hdr">
-      <div class="qdl-table-title">
-        🗓 Quadro diário — atividade ao vivo
-      </div>
-      <div class="qdl-live"><span class="qdl-live-dot"></span> Ao vivo</div>
-    </div>
-    <div style="overflow-x:auto">
-    <table class="qdl-table">
-      <thead><tr>
-        <th>Funcionário</th><th>Status</th><th>Pedido</th><th>Item</th>
-        <th>Etapa</th><th>Componente</th><th>Timer</th><th>Hoje</th><th>Fila</th>
-      </tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table>
-    </div>
-    <div class="qdl-legend">
-      <span><span class="qdl-dot" style="background:var(--accent)"></span> Trabalhando</span>
-      <span><span class="qdl-dot" style="background:var(--amber)"></span> Pausado</span>
-      <span><span class="qdl-dot" style="background:var(--blue)"></span> Em Obra</span>
-      <span><span class="qdl-dot" style="background:var(--red)"></span> Ocioso — designar tarefa</span>
-    </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">
+    ${cards||'<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--tx3);font-size:13px">Nenhum operador encontrado</div>'}
   </div>`;
 
   $('p7-body').innerHTML=html;
 }
 
 function renderQuadroTimers(){
-  // Atualiza só os timers e tempo de hoje sem re-renderizar a tabela inteira
+  const now=Date.now();
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);const ts=todayStart.getTime();
+  const _fmtHoje=secs=>{const h=Math.floor(secs/3600);const m=Math.floor((secs%3600)/60);return(h>0?h+'h ':'')+m+'min';};
   const rows=_getQuadroRows();
   rows.forEach(row=>{
-    // Timer
     const tEl=$('qdl-t-'+row.user.id);
     if(tEl){
-      const k=tEl.dataset.key;
-      const i=parseInt(tEl.dataset.idx);
+      const k=tEl.dataset.key,i=parseInt(tEl.dataset.idx);
       tEl.textContent=fmtTime(etapaElapsed(k,i));
     }
-    // Hoje
     const hEl=$('qdl-hj-'+row.user.id);
-    if(hEl){
-      const h=Math.floor(row.todaySecs/3600);
-      const m=Math.floor((row.todaySecs%3600)/60);
-      hEl.textContent=(h>0?h+'h ':'')+' '+m+'min';
-    }
+    if(hEl)hEl.textContent=_fmtHoje(row.todaySecs);
   });
 }
 
