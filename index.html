@@ -1629,7 +1629,13 @@ function getProdutosDoGrupo(grupo,propId){
 }
 
 // ── Navigation ──
-function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active')}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $(id).classList.add('active');
+  // Salva página atual para restaurar após reload (só páginas top-level seguras)
+  if(currentUser&&['p1','p6','p7','p8','p9'].includes(id))
+    localStorage.setItem('ulhoa_lastPage_'+currentUser.id,id);
+}
 function setBread(items){
   $('breadbar').innerHTML=items.map((it,i)=>{
     const sep=i>0?'<span class="bc-sep">›</span>':'';
@@ -1885,15 +1891,11 @@ function _entrarComoUsuario(user){
   if(nm)nm.textContent=currentUser.apelido||currentUser.nome.split(' ')[0];
   if(rl)rl.textContent=currentUser.cargo;
   if(currentUser.role==='operador'){
-    setBread([{label:'Minhas Tarefas',active:true}]);setTitle('Minhas Tarefas');
-    showPage('p1');
-    if(allData.length===0){_showSkeleton(4);_setLoadBar(5);}
-    else renderMinhasTarefas();
+    if(allData.length===0){setBread([{label:'Minhas Tarefas',active:true}]);setTitle('Minhas Tarefas');showPage('p1');_showSkeleton(4);_setLoadBar(5);}
+    else _navRestoreAfterLoad();
   } else {
-    setBread([{label:'Pedidos',active:true}]);setTitle('Pedidos em Produção');
-    showPage('p1');
-    if(allData.length===0){_showSkeleton(7);_setLoadBar(5);}
-    else renderP1();
+    if(allData.length===0){setBread([{label:'Pedidos',active:true}]);setTitle('Pedidos em Produção');showPage('p1');_showSkeleton(7);_setLoadBar(5);}
+    else _navRestoreAfterLoad();
   }
 }
 function _skeletonCard(){
@@ -4274,8 +4276,21 @@ function _stopPolling(){
   document.removeEventListener('visibilitychange',_onVisibilityChange);
 }
 
+const _SESSION_TIMEOUT_MS=2*60*60*1000; // 2 horas
+let _hiddenSinceTs=null;
 function _onVisibilityChange(){
-  if(!document.hidden)_pollProductionStates(); // refresh imediato ao voltar ao app
+  if(document.hidden){
+    _hiddenSinceTs=Date.now();
+  } else {
+    if(_hiddenSinceTs&&(Date.now()-_hiddenSinceTs)>_SESSION_TIMEOUT_MS&&currentUser){
+      _hiddenSinceTs=null;
+      toast('Sessão expirada por inatividade — faça login novamente');
+      setTimeout(()=>_logout(),1500);
+      return;
+    }
+    _hiddenSinceTs=null;
+    _pollProductionStates(); // refresh imediato ao voltar ao app
+  }
 }
 
 // ── Quadro Diário — Atividade ao Vivo ──────────────────────────
@@ -4702,7 +4717,27 @@ function renderQuadroTimers(){
   });
 }
 
-function _render(){if(!currentUser)return;currentUser.role==='operador'?renderMinhasTarefas():renderP1();}
+// Restaura a última página salva após carga de dados (login/reload)
+function _navRestoreAfterLoad(){
+  if(!currentUser)return;
+  const lastPg=localStorage.getItem('ulhoa_lastPage_'+currentUser.id)||'p1';
+  if(lastPg==='p6'&&currentUser.role==='operador'){navToMeuDash();return;}
+  if(lastPg==='p7'){navToQuadro();return;}
+  if(lastPg==='p8'&&currentUser.role==='gestor'){navToAlocacao();return;}
+  if(lastPg==='p9'&&currentUser.role==='gestor'&&typeof navToHistorico==='function'){navToHistorico();return;}
+  currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+}
+
+function _render(){
+  if(!currentUser)return;
+  // Re-renderiza a página atualmente visível (chamado pelo polling a cada 5s)
+  const activeId=document.querySelector('.page.active')?.id;
+  if(activeId==='p6'){renderMeuDash();return;}
+  if(activeId==='p7'){renderQuadro();return;}
+  if(activeId==='p8'){renderAlocacao();return;}
+  // P9 tem fetch próprio — não re-renderizar no poll
+  currentUser.role==='operador'?renderMinhasTarefas():renderP1();
+}
 
 // Força o pedido a permanecer no cache do servidor (chamado em toda ação de demandar)
 function _refreshProposalCache(proj){
@@ -4740,11 +4775,11 @@ async function _carregarContextoOperador(userId){
       });
     }
     _operadorPronto=true;
-    renderMinhasTarefas();
+    _navRestoreAfterLoad();
     console.log('[operador] fast-load: '+proposals?.length+' propostas, '+producao?.length+' docs de produção');
   }catch(_){
     _operadorPronto=true;
-    renderMinhasTarefas();
+    _navRestoreAfterLoad();
     toast('⚠ Falha ao conectar — usando dados em cache');
   }
 }
@@ -4778,7 +4813,7 @@ async function _carregarPropostasTodas(){
     allData=[...byId.values()];
 
     await loadProducaoStates();
-    _render();
+    _navRestoreAfterLoad(); // restaura a última página após primeiro carregamento
 
     // Carrega demais páginas até receber vazia OU ultrapassar _totalPags+3 (segurança)
     const paginasFalhas=[];
